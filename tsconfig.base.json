@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": false,
+    "noUncheckedIndexedAccess": true,
+    "baseUrl": ".",
+    "paths": {
+      "@rdv/db": ["packages/db/src/index.ts"],
+      "@rdv/db/*": ["packages/db/src/*"],
+      "@rdv/domain": ["packages/domain/src/index.ts"],
+      "@rdv/domain/*": ["packages/domain/src/*"],
+      "@rdv/queue": ["packages/queue/src/index.ts"],
+      "@rdv/queue/*": ["packages/queue/src/*"],
+      "@rdv/ai": ["packages/ai/src/index.ts"],
+      "@rdv/ai/*": ["packages/ai/src/*"],
+      "@rdv/notifications": ["packages/notifications/src/index.ts"],
+      "@rdv/notifications/*": ["packages/notifications/src/*"],
+      "@rdv/auth": ["packages/auth/src/index.ts"],
+      "@rdv/auth/*": ["packages/auth/src/*"],
+      "@rdv/lib": ["packages/lib/src/index.ts"],
+      "@rdv/lib/*": ["packages/lib/src/*"]
+    }
+  }
+}

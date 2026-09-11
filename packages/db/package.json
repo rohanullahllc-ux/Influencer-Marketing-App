@@ -1,0 +1,19 @@
+{
+  "name": "@rdv/db",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./systemClient": "./src/systemClient.ts"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.36.1",
+    "postgres": "^3.4.5",
+    "@rdv/lib": "0.1.0"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.28.0"
+  }
+}

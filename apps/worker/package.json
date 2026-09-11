@@ -1,0 +1,14 @@
+{
+  "name": "@rdv/worker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "bullmq": "^5.28.1",
+    "@rdv/queue": "0.1.0",
+    "@rdv/db": "0.1.0",
+    "@rdv/ai": "0.1.0",
+    "@rdv/notifications": "0.1.0",
+    "@rdv/lib": "0.1.0"
+  }
+}
