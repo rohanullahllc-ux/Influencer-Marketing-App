@@ -1,0 +1,12 @@
+{
+  "name": "@rdv/queue",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "dependencies": {
+    "bullmq": "^5.28.1",
+    "ioredis": "^5.4.1",
+    "@rdv/lib": "0.1.0"
+  }
+}

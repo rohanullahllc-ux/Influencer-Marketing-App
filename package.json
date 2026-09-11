@@ -1,0 +1,26 @@
+{
+  "name": "rdv-outreach-os",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Rohan Digital Ventures - Influencer Marketing Campaign & Outreach Operating System (V1)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "migrate": "node --import tsx packages/db/src/migrate.ts",
+    "seed:dev": "node --import tsx scripts/seed-dev.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "worker:dev": "node --import tsx apps/worker/src/index.ts",
+    "web:dev": "npm run dev --workspace apps/web",
+    "backup": "bash scripts/backup.sh",
+    "restore": "bash scripts/restore.sh"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "tsx": "^4.19.2",
+    "vitest": "^2.1.4",
+    "@types/node": "^22.9.0"
+  }
+}

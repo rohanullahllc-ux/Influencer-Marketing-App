@@ -1,0 +1,9 @@
+node_modules/
+.next/
+dist/
+*.log
+*.tsbuildinfo
+backups/*.sql
+.env
+.env.*
+!.env.example
