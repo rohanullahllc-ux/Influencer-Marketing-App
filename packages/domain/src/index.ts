@@ -3,3 +3,5 @@ export * from "./products.js";
 export * from "./productIntelligence.js";
 export * from "./youtubeClient.js";
 export * from "./creatorDiscovery.js";
+export * from "./campaigns.js";
+export * from "./templates.js";
