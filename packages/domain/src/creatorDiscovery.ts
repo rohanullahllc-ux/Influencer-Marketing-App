@@ -225,3 +225,19 @@ export async function listCreators(params: { workspaceId: string; actorUserId: s
     return tx.select().from(creators).where(eq(creators.workspaceId, workspaceId)).orderBy(desc(creators.discoveredAt));
   });
 }
+
+/** Wave 2 Phase 5: a single-creator lookup, added for the qualification/matching workers so they never reach into @rdv/db's schema directly. */
+export async function getCreator(params: {
+  workspaceId: string;
+  actorUserId: string;
+  creatorId: string;
+}): Promise<Creator> {
+  const { workspaceId, actorUserId, creatorId } = params;
+  return withWorkspace(workspaceId, async (tx) => {
+    const [actorMembership] = await tx.select().from(workspaceMembers).where(eq(workspaceMembers.userId, actorUserId));
+    requireRole(actorMembership?.role, "member_operator");
+    const [creator] = await tx.select().from(creators).where(eq(creators.id, creatorId)).limit(1);
+    if (!creator) throw new NotFoundError(`No creator with id ${creatorId}`);
+    return creator;
+  });
+}
