@@ -1,3 +1,5 @@
 export * from "./entities.js";
 export * from "./products.js";
 export * from "./productIntelligence.js";
+export * from "./youtubeClient.js";
+export * from "./creatorDiscovery.js";

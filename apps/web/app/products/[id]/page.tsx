@@ -3,8 +3,9 @@ import { AuthorizationError } from "@rdv/lib";
 import { requireSession } from "../../../lib/session";
 import { GenerateIntelligenceButton } from "./GenerateIntelligenceButton";
 import { IntelligenceVersionCard } from "./IntelligenceVersionCard";
+import { DiscoveryPanel } from "./DiscoveryPanel";
 
-/** Wave 2 Phase 2 (plan §7): product detail + the Product Intelligence review/approve panel. */
+/** Wave 2 Phase 2/3 (plan §7, §8): product detail, the Product Intelligence review/approve panel, and (once a version is approved) Creator Discovery. */
 export default async function ProductDetailPage({ params }: { params: { id: string } }) {
   let actor;
   try {
@@ -33,6 +34,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
     (a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime()
   );
   const canApprove = actor.role === "owner" || actor.role === "admin";
+  const hasApprovedIntelligence = sortedVersions.some((v) => v.status === "approved");
 
   return (
     <main style={{ padding: 32, maxWidth: 720 }}>
@@ -58,6 +60,15 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
             canApprove={canApprove}
           />
         ))
+      )}
+
+      <h2 style={{ marginTop: 32 }}>Creator Discovery</h2>
+      {hasApprovedIntelligence ? (
+        <DiscoveryPanel productId={product.id} />
+      ) : (
+        <p style={{ color: "#666" }}>
+          Approve a Product Intelligence version above to enable creator discovery for this product.
+        </p>
       )}
     </main>
   );
