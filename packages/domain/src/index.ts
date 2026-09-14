@@ -5,3 +5,5 @@ export * from "./youtubeClient.js";
 export * from "./creatorDiscovery.js";
 export * from "./campaigns.js";
 export * from "./templates.js";
+export * from "./qualification.js";
+export * from "./creatorMatching.js";

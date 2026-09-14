@@ -1,10 +1,19 @@
-import { getCampaign, listCampaignCreators, listCampaignTemplates, listCreators, listTemplates } from "@rdv/domain";
+import {
+  getCampaign,
+  listCampaignCreators,
+  listCampaignTemplates,
+  listCreators,
+  listTemplates,
+  listCurrentQualifications,
+  listCurrentMatches,
+} from "@rdv/domain";
 import { AuthorizationError } from "@rdv/lib";
 import { requireSession } from "../../../lib/session";
 import { ShortlistPanel } from "./ShortlistPanel";
 import { TemplateAssignmentPanel } from "./TemplateAssignmentPanel";
+import { QualificationMatchingPanel } from "./QualificationMatchingPanel";
 
-/** Wave 2 Phase 4 (plan §9): campaign detail — every locked field, the creator shortlist, and template assignment by segment. */
+/** Wave 2 Phase 4/5 (plan §9, §10): campaign detail — every locked field, the creator shortlist, template assignment by segment, and deterministic qualification + AI matching. */
 export default async function CampaignDetailPage({ params }: { params: { id: string } }) {
   let actor;
   try {
@@ -23,12 +32,15 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   }
 
   const campaign = await getCampaign({ workspaceId: actor.workspaceId, actorUserId: actor.userId, campaignId: params.id });
-  const [shortlisted, allCreators, assignments, allTemplates] = await Promise.all([
+  const [shortlisted, allCreators, assignments, allTemplates, qualifications, matches] = await Promise.all([
     listCampaignCreators({ workspaceId: actor.workspaceId, actorUserId: actor.userId, campaignId: params.id }),
     listCreators({ workspaceId: actor.workspaceId, actorUserId: actor.userId }),
     listCampaignTemplates({ workspaceId: actor.workspaceId, actorUserId: actor.userId, campaignId: params.id }),
     listTemplates({ workspaceId: actor.workspaceId, actorUserId: actor.userId }),
+    listCurrentQualifications({ workspaceId: actor.workspaceId, actorUserId: actor.userId, campaignId: params.id }),
+    listCurrentMatches({ workspaceId: actor.workspaceId, actorUserId: actor.userId, campaignId: params.id }),
   ]);
+  const shortlistedCreators = allCreators.filter((c) => shortlisted.some((s) => s.creatorId === c.id));
 
   return (
     <main style={{ padding: 32, maxWidth: 720 }}>
@@ -83,6 +95,14 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
 
       <h2 style={{ marginTop: 32 }}>Template assignment</h2>
       <TemplateAssignmentPanel campaignId={campaign.id} allTemplates={allTemplates} assignments={assignments} />
+
+      <h2 style={{ marginTop: 32 }}>Qualification + Matching</h2>
+      <QualificationMatchingPanel
+        campaignId={campaign.id}
+        shortlistedCreators={shortlistedCreators}
+        initialQualifications={qualifications}
+        initialMatches={matches}
+      />
     </main>
   );
 }

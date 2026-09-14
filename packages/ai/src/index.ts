@@ -16,6 +16,11 @@ import "./operations/stub.js";
 // Wave 2 Phase 2: the first real product AI operation, registered the
 // same way.
 import "./operations/analyzeProduct.js";
+// Wave 2 Phase 5: creator-match explanation — a second, independent
+// signal, never the final authority for qualification (see the
+// operation's own doc comment).
+import "./operations/explainCreatorMatch.js";
 
 export { getWorkspaceAnthropicClient } from "./client.js";
 export type { AnalyzeProductInput, AnalyzeProductOutput } from "./operations/analyzeProduct.js";
+export type { ExplainCreatorMatchInput, ExplainCreatorMatchOutput } from "./operations/explainCreatorMatch.js";
