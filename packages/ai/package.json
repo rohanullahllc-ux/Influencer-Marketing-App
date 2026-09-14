@@ -5,6 +5,9 @@
   "type": "module",
   "main": "src/index.ts",
   "dependencies": {
-    "@rdv/lib": "0.1.0"
+    "@rdv/lib": "0.1.0",
+    "@rdv/auth": "0.1.0",
+    "@anthropic-ai/sdk": "^0.125.0",
+    "zod": "^4.6.5"
   }
 }
