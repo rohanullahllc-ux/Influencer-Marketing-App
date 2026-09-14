@@ -10,6 +10,7 @@
   "scripts": {
     "migrate": "node --import tsx packages/db/src/migrate.ts",
     "seed:dev": "node --import tsx scripts/seed-dev.ts",
+    "issue-setup-token": "node --import tsx scripts/issue-setup-token.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "worker:dev": "node --import tsx apps/worker/src/index.ts",

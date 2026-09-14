@@ -3,6 +3,7 @@ node_modules/
 dist/
 *.log
 *.tsbuildinfo
+dump.rdb
 backups/*.sql
 .env
 .env.*

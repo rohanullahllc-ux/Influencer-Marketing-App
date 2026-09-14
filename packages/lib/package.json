@@ -5,6 +5,10 @@
   "type": "module",
   "main": "src/index.ts",
   "dependencies": {
-    "pino": "^9.5.0"
+    "pino": "^9.5.0",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6"
   }
 }
