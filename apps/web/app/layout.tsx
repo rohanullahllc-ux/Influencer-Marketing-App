@@ -1,3 +1,5 @@
+import { Providers } from "./providers";
+
 export const metadata = {
   title: "RDV Outreach OS",
   description: "Rohan Digital Ventures — Influencer Marketing Campaign & Outreach Operating System",
@@ -6,7 +8,9 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body style={{ fontFamily: "system-ui, sans-serif", margin: 0 }}>{children}</body>
+      <body style={{ fontFamily: "system-ui, sans-serif", margin: 0 }}>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

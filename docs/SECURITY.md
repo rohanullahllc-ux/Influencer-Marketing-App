@@ -55,6 +55,16 @@ creates a workspace or a user. `createWorkspaceWithOwner` is only ever
 invoked from an already-authenticated, already-privileged context (see
 docs/DECISIONS.md D1).
 
+## Passwords and account setup (Wave 2 Phase 0)
+
+`users.password_hash` is a bcrypt hash (`packages/lib/src/password.ts`,
+12 salt rounds) — never the reversible AES-256-GCM used for third-party
+credentials below. There is still no public signup: an account only gets a
+password via a one-time setup token an Owner/Admin issues for an existing
+member (`packages/auth/src/onboarding.ts`), stored only as a SHA-256 hash
+(`users.setup_token_hash`) with an expiry, consumed exactly once. An
+Owner/Admin never sees or holds the member's chosen password.
+
 ## Audit log
 
 `writeAuditLog` (packages/db/src/audit.ts) is append-only by convention.

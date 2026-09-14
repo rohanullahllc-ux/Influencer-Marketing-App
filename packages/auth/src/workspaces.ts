@@ -186,3 +186,41 @@ export async function getUserByEmail(email: string) {
   if (!row) throw new NotFoundError(`No user with email ${email}`);
   return row;
 }
+
+export interface MemberSummary {
+  userId: string;
+  email: string;
+  name: string | null;
+  role: WorkspaceRole;
+  hasPassword: boolean;
+}
+
+/**
+ * Wave 2 Phase 0 (plan §5): lists a workspace's members with enough detail
+ * for an Owner/Admin to see who still needs a setup link issued
+ * (`hasPassword: false`). Never returns `password_hash`/`setup_token_hash`
+ * themselves — only a boolean derived from whether one is set.
+ */
+export async function listMembers(workspaceId: string): Promise<MemberSummary[]> {
+  return withWorkspace(workspaceId, async (tx) => {
+    const rows = await tx
+      .select({
+        userId: users.id,
+        email: users.email,
+        name: users.name,
+        role: workspaceMembers.role,
+        passwordHash: users.passwordHash,
+      })
+      .from(workspaceMembers)
+      .innerJoin(users, eq(workspaceMembers.userId, users.id))
+      .where(eq(workspaceMembers.workspaceId, workspaceId));
+
+    return rows.map((r) => ({
+      userId: r.userId,
+      email: r.email,
+      name: r.name,
+      role: r.role as WorkspaceRole,
+      hasPassword: r.passwordHash !== null,
+    }));
+  });
+}

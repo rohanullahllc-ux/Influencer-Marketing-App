@@ -37,16 +37,44 @@ adapter, rather than Clerk.
   (adapter, session handling) than Clerk's drop-in components would. This
   is judged acceptable because the auth surface is intentionally small.
 
-**Production note:** Wave 1 wires Auth.js with a dev-only Credentials
-provider (email-only, no password — see packages/auth and
-apps/web/src/auth.ts) because this sandboxed build environment has no real
-OAuth app registrations or transactional-email provider credentials. Before
-any real deployment, the Credentials provider must be replaced with a real
-provider (e.g. Google OAuth, or Auth.js's Email/magic-link provider backed
-by a real transactional email sender) — this is a deployment-configuration
-task, not a Wave 1 architectural gap: the workspace/RBAC domain logic in
-packages/auth is provider-agnostic and does not change when the front-door
-sign-in method changes.
+**Correction (Wave 2 Phase 0):** this note originally claimed Auth.js was
+already wired in Wave 1, at `apps/web/src/auth.ts`. That was inaccurate —
+Wave 1 shipped no auth implementation at all (`packages/auth` was domain
+logic only; nothing established a session). Auth.js is actually wired
+starting in **Wave 2 Phase 0**, at `apps/web/auth.ts` (repo root of
+`apps/web`, not under `src/`), with a Credentials provider backed by a real
+bcrypt password hash (not email-only trust) — see D4. Before any real
+deployment, the Credentials provider can still be swapped for a real OAuth
+or magic-link provider without touching `packages/auth`'s workspace/RBAC
+logic, which remains provider-agnostic as originally intended.
+
+## D4 — Wave 2 Phase 0 auth: password + JWT via a one-time setup token, not admin-managed passwords
+
+**Decision:** Auth.js (`next-auth@5`, Credentials provider, JWT session
+strategy — no Account/Session/VerificationToken tables). An Owner/Admin
+provisions a member via the existing `addMember`, then issues a one-time,
+single-use setup token (`packages/auth/src/onboarding.ts`
+`issueSetupToken`); the member visits `/setup-account?token=...` and sets
+their own password (`consumeSetupToken`), which the Owner/Admin never
+learns. The raw token is returned once in the issuing API response and
+persisted only as a SHA-256 hash (`users.setup_token_hash`,
+`users.setup_token_expires_at`) — relayed out-of-band since no
+transactional email provider exists yet (per D1).
+
+**Rationale:** the simplest option consistent with the existing
+architecture that is still *real* authentication — reuses `users`/
+`workspace_members` directly, adds three nullable columns and no new
+tables, needs no external OAuth app or email provider, and never leaves an
+Owner/Admin holding a member's actual password (ruled out explicitly during
+Wave 2 planning as an unacceptable long-term model). Passwords are hashed
+with bcrypt (`packages/lib/src/password.ts`) — deliberately not the
+AES-256-GCM in `encryption.ts`, which is for reversible third-party
+secrets, not one-way password storage. Setup tokens use a *deterministic*
+hash (SHA-256, `packages/lib/src/setupToken.ts`) rather than bcrypt,
+because a setup-token lookup must find the owning user by hash before any
+identity is known — bcrypt's salted, non-deterministic hashes can't support
+that lookup pattern; a password lookup, by contrast, already knows the
+user (by email) before verifying.
 
 ## D2 — A second, RLS-bypassing Postgres role (`rdv_system`) for workspace bootstrap only
 

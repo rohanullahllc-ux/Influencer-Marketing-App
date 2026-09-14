@@ -36,6 +36,14 @@ export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
   name: text("name"),
+  // Wave 2 Phase 0 (plan §5, §14.1): bcrypt hash, null until the member
+  // completes one-time account setup. Never a reversible AES payload —
+  // see @rdv/lib password.ts vs encryption.ts.
+  passwordHash: text("password_hash"),
+  // One-time setup token (SHA-256 hash only, see @rdv/lib setupToken.ts).
+  // Both null once consumed or if never issued.
+  setupTokenHash: text("setup_token_hash"),
+  setupTokenExpiresAt: timestamp("setup_token_expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

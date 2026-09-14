@@ -61,6 +61,8 @@ redis-cli ping   # -> PONG
 | `REDIS_URL` | `redis://127.0.0.1:6379` | |
 | `CREDENTIALS_MASTER_KEY` | a long random string, 16+ chars | Never commit a real value. See docs/SECURITY.md. |
 | `LOG_LEVEL` | `info` | pino level. |
+| `AUTH_SECRET` | a long random string, 32+ chars | Wave 2 Phase 0: Auth.js JWT signing secret. Never commit a real value. Generate with `openssl rand -base64 32`. |
+| `AUTH_TRUST_HOST` | `true` | Wave 2 Phase 0: Auth.js v5 refuses to trust the request `Host` header by default (`UntrustedHost` error on every `/api/auth/*` call) unless told to — the correct setting for this single-process app with no trusted reverse proxy in front of it. Found by actually running the built server and exercising sign-in, not assumed. |
 
 Tests do not read these from the shell — `tests/setup.ts` defaults them to
 a dedicated `rdv_test` database so `npm test` never touches `rdv_dev`
@@ -75,8 +77,26 @@ shell session — a reminder to run tests in a clean environment).
 npm install
 npm run migrate     # applies packages/db/src/migrations/*.sql in order
 npm run seed:dev     # creates a dev workspace with an owner + one member
-npm test             # full Wave 1 suite against rdv_test
+npm test             # full Wave 1+2 suite against rdv_test
 ```
+
+### Wave 2 Phase 0: first sign-in
+
+`seed:dev` creates users but sets no password (there's no public signup —
+see docs/DECISIONS.md D1/D4). To actually sign in, bootstrap the seeded
+Owner's first credential, then use the normal in-app flow for everyone
+after:
+
+```bash
+npm run issue-setup-token -- --email owner@rdv.local
+# prints: /setup-account?token=<...>
+# open http://localhost:3000/setup-account?token=<...> and set a password
+```
+
+Once the Owner can sign in, they provision further members from
+`/settings/members` (issues a setup link the same way, without needing
+script/DB access) — `issue-setup-token` is a bootstrap-only escape hatch
+for the first account, same trust tier as `seed-dev.ts` itself.
 
 ## 5. Running the apps
 
