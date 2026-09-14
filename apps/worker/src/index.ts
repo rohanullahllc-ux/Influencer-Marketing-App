@@ -4,6 +4,7 @@ import { getLogger } from "@rdv/lib";
 import { getJobProcessor } from "./registry.js";
 import "./processors/foundationSmoke.js";
 import "./processors/analyzeProduct.js";
+import "./processors/creatorDiscovery.js";
 
 const log = getLogger({ module: "worker" });
 
