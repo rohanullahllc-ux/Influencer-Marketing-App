@@ -8,6 +8,7 @@
     "@rdv/queue": "0.1.0",
     "@rdv/db": "0.1.0",
     "@rdv/ai": "0.1.0",
+    "@rdv/domain": "0.1.0",
     "@rdv/notifications": "0.1.0",
     "@rdv/lib": "0.1.0"
   }

@@ -6,6 +6,9 @@
   "main": "src/index.ts",
   "dependencies": {
     "drizzle-orm": "^0.36.1",
-    "@rdv/db": "0.1.0"
+    "@rdv/db": "0.1.0",
+    "@rdv/auth": "0.1.0",
+    "@rdv/queue": "0.1.0",
+    "@rdv/lib": "0.1.0"
   }
 }
