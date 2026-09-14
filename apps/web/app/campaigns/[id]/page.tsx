@@ -12,8 +12,9 @@ import { requireSession } from "../../../lib/session";
 import { ShortlistPanel } from "./ShortlistPanel";
 import { TemplateAssignmentPanel } from "./TemplateAssignmentPanel";
 import { QualificationMatchingPanel } from "./QualificationMatchingPanel";
+import { OutreachDraftPanel } from "./OutreachDraftPanel";
 
-/** Wave 2 Phase 4/5 (plan §9, §10): campaign detail — every locked field, the creator shortlist, template assignment by segment, and deterministic qualification + AI matching. */
+/** Wave 2 Phase 4/5/6 (plan §9, §10, §11): campaign detail — every locked field, the creator shortlist, template assignment by segment, deterministic qualification + AI matching, and outreach draft generation. */
 export default async function CampaignDetailPage({ params }: { params: { id: string } }) {
   let actor;
   try {
@@ -103,6 +104,9 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
         initialQualifications={qualifications}
         initialMatches={matches}
       />
+
+      <h2 style={{ marginTop: 32 }}>Outreach Drafts</h2>
+      <OutreachDraftPanel campaignId={campaign.id} shortlistedCreators={shortlistedCreators} />
     </main>
   );
 }

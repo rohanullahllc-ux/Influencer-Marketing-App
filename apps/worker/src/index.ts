@@ -6,6 +6,7 @@ import "./processors/foundationSmoke.js";
 import "./processors/analyzeProduct.js";
 import "./processors/creatorDiscovery.js";
 import "./processors/creatorMatching.js";
+import "./processors/outreachDraft.js";
 
 const log = getLogger({ module: "worker" });
 

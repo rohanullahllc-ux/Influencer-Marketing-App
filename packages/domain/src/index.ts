@@ -7,3 +7,5 @@ export * from "./campaigns.js";
 export * from "./templates.js";
 export * from "./qualification.js";
 export * from "./creatorMatching.js";
+export * from "./approvals.js";
+export * from "./outreachDrafts.js";

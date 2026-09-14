@@ -20,7 +20,11 @@ import "./operations/analyzeProduct.js";
 // signal, never the final authority for qualification (see the
 // operation's own doc comment).
 import "./operations/explainCreatorMatch.js";
+// Wave 2 Phase 6: outreach personalization — a draft only; approval is a
+// separate, mandatory human action (see the operation's own doc comment).
+import "./operations/personalizeOutreach.js";
 
 export { getWorkspaceAnthropicClient } from "./client.js";
 export type { AnalyzeProductInput, AnalyzeProductOutput } from "./operations/analyzeProduct.js";
 export type { ExplainCreatorMatchInput, ExplainCreatorMatchOutput } from "./operations/explainCreatorMatch.js";
+export type { PersonalizeOutreachInput, PersonalizeOutreachOutput } from "./operations/personalizeOutreach.js";
