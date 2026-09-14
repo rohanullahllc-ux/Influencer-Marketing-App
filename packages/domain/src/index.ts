@@ -9,3 +9,6 @@ export * from "./qualification.js";
 export * from "./creatorMatching.js";
 export * from "./approvals.js";
 export * from "./outreachDrafts.js";
+export * from "./safetyGate.js";
+export * from "./suppressions.js";
+export * from "./dryRun.js";

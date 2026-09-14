@@ -13,8 +13,9 @@ import { ShortlistPanel } from "./ShortlistPanel";
 import { TemplateAssignmentPanel } from "./TemplateAssignmentPanel";
 import { QualificationMatchingPanel } from "./QualificationMatchingPanel";
 import { OutreachDraftPanel } from "./OutreachDraftPanel";
+import { DryRunPanel } from "./DryRunPanel";
 
-/** Wave 2 Phase 4/5/6 (plan §9, §10, §11): campaign detail — every locked field, the creator shortlist, template assignment by segment, deterministic qualification + AI matching, and outreach draft generation. */
+/** Wave 2 Phase 4/5/6/7 (plan §9, §10, §11, §12): campaign detail — every locked field, the creator shortlist, template assignment by segment, deterministic qualification + AI matching, outreach draft generation, and the safety-gate dry run. */
 export default async function CampaignDetailPage({ params }: { params: { id: string } }) {
   let actor;
   try {
@@ -107,6 +108,12 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
 
       <h2 style={{ marginTop: 32 }}>Outreach Drafts</h2>
       <OutreachDraftPanel campaignId={campaign.id} shortlistedCreators={shortlistedCreators} />
+
+      <h2 style={{ marginTop: 32 }}>Safety Gate / Dry Run</h2>
+      <p style={{ fontSize: 13, color: "#666", marginBottom: 8 }}>
+        Shows eligible vs. blocked messages with exact reasons. No real email is ever sent from this screen or anywhere in this codebase.
+      </p>
+      <DryRunPanel campaignId={campaign.id} shortlistedCreators={shortlistedCreators} />
     </main>
   );
 }
