@@ -6,6 +6,7 @@ import { NotFoundError, ValidationError, oneOrThrow } from "@rdv/lib";
 import type { DryRunEvaluation, DryRunEvaluationResult } from "./entities.js";
 import { evaluateSafetyGate, checkScheduleValidity, type SendingWindow } from "./safetyGate.js";
 import { isSuppressed } from "./suppressions.js";
+import { hasActiveCrossCampaignContact } from "./crossCampaignContact.js";
 
 const {
   workspaces,
@@ -135,6 +136,11 @@ export async function performDryRunEvaluation(params: {
         .limit(1);
 
       const suppressed = await isSuppressed({ workspaceId, identity: creator.contactEmail });
+      const crossCampaignBlocked = await hasActiveCrossCampaignContact(tx, {
+        workspaceId,
+        campaignId,
+        recipientIdentity: creator.contactEmail,
+      });
 
       const isDuplicate = priorEligibleCreatorIds.has(creator.id);
       const wouldExceedFirstSendCap =
@@ -155,6 +161,11 @@ export async function performDryRunEvaluation(params: {
         hasValidApproval: Boolean(approval),
         dailyCapReached: wouldExceedDailyCap,
         firstSendCapReached: wouldExceedFirstSendCap,
+        // A dry run is a preview, not a decision point — it never applies
+        // an override; the real send-execution path is the only place an
+        // override can be exercised, and only ever with an audit entry.
+        crossCampaignBlocked,
+        crossCampaignOverride: false,
         isDuplicate,
         scheduleValid: schedule.valid,
         scheduleReason: schedule.reason,

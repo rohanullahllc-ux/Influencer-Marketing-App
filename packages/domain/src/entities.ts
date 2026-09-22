@@ -14,6 +14,10 @@ import {
   suppressions,
   dryRunEvaluations,
   dryRunEvaluationResults,
+  outreachSends,
+  outreachSendAttempts,
+  inboundMessages,
+  providerMailboxState,
 } from "@rdv/db";
 
 /**
@@ -40,3 +44,7 @@ export type Approval = InferSelectModel<typeof approvals>;
 export type Suppression = InferSelectModel<typeof suppressions>;
 export type DryRunEvaluation = InferSelectModel<typeof dryRunEvaluations>;
 export type DryRunEvaluationResult = InferSelectModel<typeof dryRunEvaluationResults>;
+export type OutreachSend = InferSelectModel<typeof outreachSends>;
+export type OutreachSendAttempt = InferSelectModel<typeof outreachSendAttempts>;
+export type InboundMessage = InferSelectModel<typeof inboundMessages>;
+export type ProviderMailboxState = InferSelectModel<typeof providerMailboxState>;

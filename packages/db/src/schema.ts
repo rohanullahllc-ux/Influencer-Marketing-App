@@ -610,7 +610,15 @@ export const dryRunEvaluationResults = pgTable(
  * ---------------------------------------------------------------------
  */
 
-export const sendStatusEnum = pgEnum("send_status", ["scheduled", "sending", "sent", "failed", "unknown", "cancelled"]);
+export const sendStatusEnum = pgEnum("send_status", [
+  "scheduled",
+  "sending",
+  "sent",
+  "failed",
+  "unknown",
+  "cancelled",
+  "blocked",
+]);
 
 export const outreachSends = pgTable(
   "outreach_sends",
@@ -635,6 +643,11 @@ export const outreachSends = pgTable(
     attemptCount: integer("attempt_count").notNull().default(0),
     lastAttemptedAt: timestamp("last_attempted_at", { withTimezone: true }),
     sentAt: timestamp("sent_at", { withTimezone: true }),
+    // Wave 3 (migration 0009): whether a human explicitly overrode the
+    // cross-campaign contact safeguard when scheduling this send — decided
+    // once, at schedule time, and honored (not re-decided) by the
+    // execution-time gate, which may run long after scheduling.
+    crossCampaignOverride: boolean("cross_campaign_override").notNull().default(false),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

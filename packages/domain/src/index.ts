@@ -12,3 +12,6 @@ export * from "./outreachDrafts.js";
 export * from "./safetyGate.js";
 export * from "./suppressions.js";
 export * from "./dryRun.js";
+export * from "./crossCampaignContact.js";
+export * from "./outreachProvider.js";
+export * from "./outreachSend.js";

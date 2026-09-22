@@ -16,6 +16,8 @@ function baseContext(overrides: Partial<SafetyGateContext> = {}): SafetyGateCont
     hasValidApproval: true,
     dailyCapReached: false,
     firstSendCapReached: false,
+    crossCampaignBlocked: false,
+    crossCampaignOverride: false,
     isDuplicate: false,
     scheduleValid: true,
     scheduleReason: null,
@@ -78,6 +80,23 @@ describe("Safety gate — evaluateSafetyGate", () => {
     const result = evaluateSafetyGate(baseContext({ isDuplicate: true }));
     expect(result.eligible).toBe(false);
     expect(result.blockReasons).toContain("duplicate_already_marked_eligible");
+  });
+
+  it("Wave 3: a cross-campaign contact block has its own distinct reason", () => {
+    const result = evaluateSafetyGate(baseContext({ crossCampaignBlocked: true }));
+    expect(result.eligible).toBe(false);
+    expect(result.blockReasons).toContain("cross_campaign_contact_safeguard");
+  });
+
+  it("Wave 3: an explicit human override lifts the cross-campaign block", () => {
+    const result = evaluateSafetyGate(baseContext({ crossCampaignBlocked: true, crossCampaignOverride: true }));
+    expect(result.eligible).toBe(true);
+    expect(result.blockReasons).not.toContain("cross_campaign_contact_safeguard");
+  });
+
+  it("Wave 3: the override flag alone (no actual cross-campaign block) changes nothing", () => {
+    const result = evaluateSafetyGate(baseContext({ crossCampaignBlocked: false, crossCampaignOverride: true }));
+    expect(result.eligible).toBe(true);
   });
 
   it("collects every applicable reason at once, not just the first", () => {

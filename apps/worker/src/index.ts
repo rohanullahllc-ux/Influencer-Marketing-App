@@ -8,6 +8,7 @@ import "./processors/creatorDiscovery.js";
 import "./processors/creatorMatching.js";
 import "./processors/outreachDraft.js";
 import "./processors/dryRun.js";
+import "./processors/outreachSend.js";
 
 const log = getLogger({ module: "worker" });
 

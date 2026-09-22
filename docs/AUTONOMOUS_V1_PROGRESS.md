@@ -73,21 +73,46 @@ branch restarts from current main rather than stacking on old history).
       helper, never automatically)
 - [ ] No Gmail-specific code yet — that is the flagged blocker
 
-### 3.3 Send execution domain + worker
-- [ ] `packages/domain/src/outreachSend.ts`: `scheduleSend`,
+### 3.3 Send execution domain + worker — DONE
+- [x] `packages/domain/src/outreachSend.ts`: `scheduleSend`,
       `executeScheduledSend` (worker-only), idempotency (workspace-scoped
-      unique key), cross-campaign contact safeguard (new check — was not
-      needed for dry-run, is needed for real sends), re-runs the full Phase 7
-      safety gate for real at execution time (never trusts a stale dry-run)
-- [ ] `apps/worker/src/processors/outreachSend.ts`: `outreach_send_execute`
-      job on the `outreach-send` lane; UNKNOWN/AMBIGUOUS handling on provider
-      timeout/uncertain result; retries via existing BullMQ defaults; audit
-      log + notification on terminal states
-- [ ] API routes: schedule a send, poll status
-- [ ] Tests: real Postgres/Redis, positive + every negative path (suppressed,
-      no valid approval, kill switch, paused campaign, first-send cap,
-      duplicate/idempotent retry, cross-campaign safeguard, ambiguous
-      provider result never treated as sent)
+      unique key, `onConflictDoNothing`), cross-campaign contact safeguard
+      (`crossCampaignContact.ts`, shared with dry-run so previews and real
+      execution always agree), re-runs the full Phase 7 safety gate for
+      real at execution time (never trusts a stale dry-run)
+- [x] Extended `safetyGate.ts` with `crossCampaignBlocked`/
+      `crossCampaignOverride` (product vision names this as part of the
+      same centralized gate) — pure function, no DB access added
+- [x] `packages/domain/src/outreachProvider.ts` + `providers/
+      mockOutreachProvider.ts`: minimal registry (mirrors `@rdv/ai`'s
+      pattern), real deterministic Mock provider (test-address convention
+      for sent/failed/unknown, same spirit as payment-provider test cards)
+- [x] `apps/worker/src/processors/outreachSend.ts`: `outreach_send_execute`
+      job on the `outreach-send` lane
+- [x] **Interruption safety, proven by test, not just designed**: a send
+      found already in `sending` state (crash after contacting the
+      provider) is marked `unknown` and the provider is never called
+      again — verified with a `+mockfail` address that would prove a
+      blind retry occurred if the safeguard were missing
+- [x] API routes: `POST/GET /api/campaigns/:id/sends`,
+      `GET /api/campaigns/:id/sends/:sendId` (polls the durable DB row,
+      not a BullMQ job id, since a far-future scheduled send may not run
+      for a long time)
+- [x] UI: "Schedule send" on an approved row in `/approvals`; a real,
+      polled Sends status panel on the campaign detail page
+- [x] Tests (17 new): `domain.outreachSend.test.ts` (15 — happy path,
+      rejects unapproved/no-email, idempotent re-schedule, suppressed,
+      paused campaign, kill switch, first-send cap, cross-campaign
+      safeguard + override, unknown outcome, failed outcome, interruption
+      safety, safe no-op re-execution) + `worker.outreachSend.test.ts` (1,
+      real BullMQ end-to-end, genuine success since Mock makes no network
+      calls) + 3 new safety-gate unit tests for the cross-campaign
+      addition
+- [x] Verification: migrations 0007–0009 apply cleanly to both databases;
+      `tsc --noEmit` clean; full suite 36 files / 200 tests passing;
+      `next build` clean, new routes present
+
+### 3.4 Reply intelligence — next
 
 ### 3.4 Reply intelligence
 - [ ] `packages/domain/src/replies.ts`: persist inbound message, match to

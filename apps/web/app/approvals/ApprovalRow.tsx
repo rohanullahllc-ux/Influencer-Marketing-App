@@ -27,6 +27,8 @@ export function ApprovalRow({ approval, canDecide }: { approval: Approval; canDe
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [sendStatus, setSendStatus] = useState<string | null>(null);
+  const [scheduling, setScheduling] = useState(false);
 
   async function decide(decision: "approve" | "reject" | "request-edit") {
     setSubmitting(true);
@@ -64,7 +66,26 @@ export function ApprovalRow({ approval, canDecide }: { approval: Approval; canDe
     router.refresh();
   }
 
+  async function handleScheduleSend() {
+    setScheduling(true);
+    setError(null);
+    const res = await fetch(`/api/campaigns/${approval.campaignId}/sends`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ approvalId: approval.id }),
+    });
+    setScheduling(false);
+    if (!res.ok) {
+      const resBody = await res.json().catch(() => ({}));
+      setError(resBody.error ?? "Failed to schedule send.");
+      return;
+    }
+    const send = await res.json();
+    setSendStatus(send.status);
+  }
+
   const isPending = approval.status === "pending";
+  const isApproved = approval.status === "approved";
 
   return (
     <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 16, marginBottom: 16 }}>
@@ -120,6 +141,16 @@ export function ApprovalRow({ approval, canDecide }: { approval: Approval; canDe
           <button onClick={() => setEditing(true)} disabled={submitting} style={{ padding: "6px 12px" }}>
             Edit underlying draft
           </button>
+          {isApproved && !sendStatus && (
+            <button onClick={handleScheduleSend} disabled={scheduling} style={{ padding: "6px 12px" }}>
+              {scheduling ? "Scheduling…" : "Schedule send"}
+            </button>
+          )}
+          {sendStatus && (
+            <span style={{ fontSize: 13, color: "#666" }}>
+              Send {sendStatus} — see the campaign&apos;s Sends panel for live status.
+            </span>
+          )}
         </div>
       )}
       {approval.decidedAt && (
