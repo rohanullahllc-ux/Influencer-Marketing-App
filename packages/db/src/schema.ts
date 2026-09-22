@@ -483,6 +483,16 @@ export const outreachDrafts = pgTable(
     generationInput: jsonb("generation_input"),
     provenance: provenanceEnum("provenance").notNull().default("ai_derived"),
     status: outreachDraftStatusEnum("status").notNull().default("draft"),
+    // Wave 3 (migration 0007): set when this draft is an AI-suggested reply
+    // response. Deliberately a plain column, not a typed `.references()` —
+    // `inboundMessages` -> `outreachSends` -> `approvals` -> `outreachDrafts`
+    // would otherwise form a circular type dependency TypeScript cannot
+    // resolve. The real FK constraint is enforced in the SQL migration
+    // regardless (schema.ts is purely a typed mirror, never the DDL source
+    // of truth — see this file's header comment). A suggested response is
+    // never sent directly — it goes through the exact same draft → approval
+    // → safety-gate → send pipeline as any other outreach.
+    inReplyToInboundMessageId: uuid("in_reply_to_inbound_message_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
@@ -583,5 +593,133 @@ export const dryRunEvaluationResults = pgTable(
   (t) => ({
     byWorkspace: index("dry_run_evaluation_results_workspace_idx").on(t.workspaceId),
     byEvaluation: index("dry_run_evaluation_results_evaluation_idx").on(t.dryRunEvaluationId),
+  })
+);
+
+/**
+ * ---------------------------------------------------------------------
+ * Wave 3 — Live Outreach + Reply Intelligence (migration 0007).
+ *
+ * `outreach_sends` always references a real, content-pinned `approvals`
+ * row — there is no path that creates a send without one. `sendStatus`
+ * includes an explicit `unknown` state: a provider timeout/uncertain
+ * result is recorded as `unknown`, never silently treated as `sent` or
+ * `failed` (product vision's mandatory UNKNOWN/AMBIGUOUS rule).
+ * `outreach_send_attempts` is an append-only per-attempt history, same
+ * pattern as `creator_qualifications`/`creator_matches` above.
+ * ---------------------------------------------------------------------
+ */
+
+export const sendStatusEnum = pgEnum("send_status", ["scheduled", "sending", "sent", "failed", "unknown", "cancelled"]);
+
+export const outreachSends = pgTable(
+  "outreach_sends",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    campaignId: uuid("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }),
+    creatorId: uuid("creator_id").notNull().references(() => creators.id, { onDelete: "cascade" }),
+    approvalId: uuid("approval_id").notNull().references(() => approvals.id, { onDelete: "restrict" }),
+    outreachStep: text("outreach_step").notNull().default("initial"),
+    // Workspace-scoped idempotency key: `${campaignId}:${creatorId}:${outreachStep}`.
+    // Unique index in the migration is the actual enforcement; this column
+    // is what @rdv/domain computes and reads.
+    idempotencyKey: text("idempotency_key").notNull(),
+    recipientIdentity: text("recipient_identity").notNull(),
+    provider: text("provider").notNull(),
+    providerMessageId: text("provider_message_id"),
+    providerThreadId: text("provider_thread_id"),
+    scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
+    status: sendStatusEnum("status").notNull().default("scheduled"),
+    statusReason: text("status_reason"),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    lastAttemptedAt: timestamp("last_attempted_at", { withTimezone: true }),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byWorkspace: index("outreach_sends_workspace_idx").on(t.workspaceId),
+    byCampaign: index("outreach_sends_campaign_idx").on(t.campaignId),
+    byRecipient: index("outreach_sends_recipient_idx").on(t.workspaceId, t.recipientIdentity),
+  })
+);
+
+export const outreachSendAttempts = pgTable(
+  "outreach_send_attempts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    outreachSendId: uuid("outreach_send_id").notNull().references(() => outreachSends.id, { onDelete: "cascade" }),
+    attemptNumber: integer("attempt_number").notNull(),
+    attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull().defaultNow(),
+    result: sendStatusEnum("result").notNull(),
+    providerMessageId: text("provider_message_id"),
+    errorMessage: text("error_message"),
+    rawProviderResponse: jsonb("raw_provider_response"),
+  },
+  (t) => ({
+    byWorkspace: index("outreach_send_attempts_workspace_idx").on(t.workspaceId),
+    bySend: index("outreach_send_attempts_send_idx").on(t.outreachSendId),
+  })
+);
+
+export const replyMatchStatusEnum = pgEnum("reply_match_status", ["matched", "ambiguous", "unknown"]);
+export const replyClassificationEnum = pgEnum("reply_classification", [
+  "interested",
+  "not_interested",
+  "needs_human_review",
+]);
+
+export const inboundMessages = pgTable(
+  "inbound_messages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    outreachSendId: uuid("outreach_send_id").references(() => outreachSends.id, { onDelete: "set null" }),
+    creatorId: uuid("creator_id").references(() => creators.id, { onDelete: "set null" }),
+    campaignId: uuid("campaign_id").references(() => campaigns.id, { onDelete: "set null" }),
+    provider: text("provider").notNull(),
+    providerMessageId: text("provider_message_id").notNull(),
+    providerThreadId: text("provider_thread_id"),
+    fromIdentity: text("from_identity").notNull(),
+    toIdentity: text("to_identity"),
+    subject: text("subject"),
+    body: text("body").notNull(),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull(),
+    rawPayload: jsonb("raw_payload"),
+    matchStatus: replyMatchStatusEnum("match_status").notNull().default("unknown"),
+    classification: replyClassificationEnum("classification"),
+    classificationConfidence: numeric("classification_confidence"),
+    classificationLimitations: text("classification_limitations"),
+    extractedFacts: jsonb("extracted_facts"),
+    suggestedDraftId: uuid("suggested_draft_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byWorkspace: index("inbound_messages_workspace_idx").on(t.workspaceId),
+    byCreator: index("inbound_messages_creator_idx").on(t.workspaceId, t.creatorId),
+  })
+);
+
+/**
+ * Generic sync-cursor/watch-expiry state (deliberately not Gmail-specific
+ * column names) so a real Gmail adapter (historyId + watch renewal) or a
+ * different provider's equivalent reconciliation model can both use this
+ * table without a schema change.
+ */
+export const providerMailboxState = pgTable(
+  "provider_mailbox_state",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    syncCursor: text("sync_cursor"),
+    watchExpiresAt: timestamp("watch_expires_at", { withTimezone: true }),
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byWorkspaceProvider: index("provider_mailbox_state_workspace_provider_idx").on(t.workspaceId, t.provider),
   })
 );
