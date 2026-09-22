@@ -9,6 +9,8 @@ import "./processors/creatorMatching.js";
 import "./processors/outreachDraft.js";
 import "./processors/dryRun.js";
 import "./processors/outreachSend.js";
+import "./processors/replyIntelligence.js";
+import "./processors/replyReconciliationPoll.js";
 
 const log = getLogger({ module: "worker" });
 

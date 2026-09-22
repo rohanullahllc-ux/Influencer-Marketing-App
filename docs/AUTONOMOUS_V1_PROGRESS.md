@@ -112,32 +112,73 @@ branch restarts from current main rather than stacking on old history).
       `tsc --noEmit` clean; full suite 36 files / 200 tests passing;
       `next build` clean, new routes present
 
-### 3.4 Reply intelligence — next
+### 3.4 Reply intelligence — DONE
+- [x] `packages/domain/src/replies.ts`: `ingestInboundMessage` (matches to
+      creator/campaign/outreach by normalized recipient identity;
+      `matched` requires both a uniquely-identified creator AND a real
+      prior `sent` outreach_sends row; a known creator with no send
+      history, or multiple creators sharing an email, is `ambiguous`; no
+      creator match at all is `unknown`), deduped on (workspace, provider,
+      provider_message_id) — a replayed webhook delivery is a true no-op,
+      never re-matched/re-classified
+- [x] `packages/ai/src/operations/classifyReply.ts` +
+      `draftReplyResponse.ts`: Interested / Not Interested / Needs Human
+      Review + confidence + limitations + extractedFacts; a second
+      operation drafts a suggested response ONLY for interested/
+      needs_human_review AND only when matched to a real campaign+creator
+      — never for not_interested, never for an unmatched/ambiguous reply.
+      The suggested response becomes a normal `outreach_drafts` row (new
+      `in_reply_to_inbound_message_id` FK) that goes through the exact
+      same approval + safety-gate + send pipeline as any other outreach —
+      reusing existing infrastructure, not a parallel reply-send path.
+      Refactored to match the established layering exactly: the AI calls
+      live in the worker processor (`apps/worker/src/processors/
+      replyIntelligence.ts`), not in packages/domain — same split as
+      Phase 5/6's creatorMatching.ts/outreachDraft.ts processors, so every
+      domain-level test stays fully deterministic (no AI/network)
+- [x] `apps/worker/src/processors/replyReconciliationPoll.ts` +
+      `packages/domain/src/providerMailboxState.ts`: the
+      webhook-primary-with-reconciliation-polling-backstop scaffolding
+      (generic sync_cursor/watch_expires_at bookkeeping, not Gmail-
+      specific) — proves the pattern now; a real provider only has to
+      plug in the actual "fetch since cursor" call later
+- [x] **Deliberately did NOT build a public/unauthenticated webhook HTTP
+      endpoint.** No real provider exists yet to define a signing/
+      verification scheme, and an unauthenticated public ingestion
+      endpoint with nothing real to verify against would be a genuine
+      security hole, not a scaffold — building a fake auth scheme would
+      be worse than not having the endpoint. Real signature verification
+      + replay protection is explicit Wave 6 scope and is built together
+      with the real provider decision. Test/dev data goes in via
+      `ingestInboundMessage` directly (fully real, just not exposed over
+      unauthenticated HTTP).
+- [x] Tests (12 new, `domain.replies.test.ts`): normalizeFromIdentity,
+      rejects empty body/fromIdentity, matched/ambiguous(known-creator-no-
+      send)/ambiguous(duplicate-email)/unknown matching, webhook dedupe
+      (true no-op, original body preserved), out-of-order/future-dated +
+      malformed nested payload ingest safely, unknown-message-id rejected,
+      classification overwrite + audit, mailbox sync state round-trip.
+      Plus `worker.replyIntelligence.test.ts` (1, real BullMQ, fails
+      loudly without an Anthropic key — same pattern as every other
+      AI-backed worker test in this build)
 
-### 3.4 Reply intelligence
-- [ ] `packages/domain/src/replies.ts`: persist inbound message, match to
-      creator/campaign/outreach by recipient identity, `ambiguous`/`unknown`
-      → needs_human_review, dedupe by (workspace, provider,
-      provider_message_id)
-- [ ] `packages/ai/src/operations/classifyReply.ts`: Interested / Not
-      Interested / Needs Human Review + confidence + limitations; separate
-      operation drafts a suggested response (never auto-sent — becomes a
-      normal `outreach_drafts` row that goes through the *same* approval +
-      safety-gate + send pipeline, reusing existing infrastructure rather
-      than inventing a parallel reply-send path)
-- [ ] Worker job for webhook-style ingestion (against the Mock provider) +
-      a reconciliation-polling job stub (proves the backstop logic works
-      even though there is no real mailbox to poll yet)
-- [ ] Tests: duplicate webhook, out-of-order, malformed payload, unknown
-      creator, ambiguous match
+### 3.5 UI integration — DONE
+- [x] Campaign detail: Sends panel (from 3.3)
+- [x] `/replies` reply inbox: real content, match status, "Classify with
+      AI" (polled), classification + confidence + limitations + extracted
+      facts once run, links to the suggested draft on /approvals
+- [x] "Schedule send" wired onto an approved row in /approvals (from 3.3)
+- [x] Homepage updated to describe the Wave 3 build and the Mock-provider
+      boundary
 
-### 3.5 UI integration
-- [ ] Campaign detail: schedule/send panel, send history/status
-- [ ] Reply inbox screen: classification, suggested response review
-
-### 3.6 Regression + commit
-- [ ] Full test suite, typecheck, build
-- [ ] Commit checkpoint(s), push to `claude/rdv-project-context-3ckcrw`
+### 3.6 Regression + commit — done for this checkpoint
+- [x] Full test suite (38 files / 212 tests), typecheck, build all clean
+- [x] Caught and fixed a real bug via `next build`'s own type checker
+      (not caught by root `tsc --noEmit`): `extractedFacts` jsonb needed
+      the same `.$type<string[]>()` annotation used elsewhere in
+      schema.ts — fixed at the source rather than casting in the
+      component
+- [x] Commit + push this checkpoint
 
 ## External blockers (need the user)
 
@@ -155,5 +196,15 @@ Everything else continues automatically without waiting on these.
 
 ## Exact next action
 
-Writing migration `0007_wave3_outreach_send_and_reply.sql` + `schema.ts`
-mirror, then the Mock provider, then send-execution domain/worker/tests.
+Wave 3 is functionally complete (schema, Mock provider, real send
+execution with a genuinely tested interruption-safety property, reply
+ingestion/matching/classification/suggested-response, all wired into real
+UI, 38 test files / 212 tests passing, clean typecheck + build). Next:
+begin Wave 4 (Creator CRM + Whop) — CRM data model (relationship status,
+history, notes, tasks, next action, AI conversation summaries — reusing
+inbound_messages/outreach_sends as the history source rather than
+duplicating it), then the Whop affiliate/conversion adapter (human-
+triggered creation, polling-based conversion tracking) built the same way
+Wave 3's outreach provider was: a real, complete, testable implementation
+against a Mock/integration-test path, stopping only at the real Whop
+account/API-key boundary.

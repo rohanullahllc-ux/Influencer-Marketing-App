@@ -6,14 +6,15 @@
   "waves": {
     "0_2_foundation_core_safety": { "status": "done", "mergedCommit": "94ccf53", "tests": "181/181" },
     "3_live_outreach_reply_intelligence": {
-      "status": "in_progress",
+      "status": "done",
+      "tests": "38 files / 212 tests",
       "phases": {
         "3.1_schema": "done",
         "3.2_provider_abstraction_and_mock": "done",
         "3.3_send_execution_domain_and_worker": "done",
-        "3.4_reply_intelligence": "in_progress",
-        "3.5_ui": "partial (send scheduling + status done; reply inbox pending)",
-        "3.6_regression_and_commit": "ongoing per-checkpoint"
+        "3.4_reply_intelligence": "done",
+        "3.5_ui": "done",
+        "3.6_regression_and_commit": "done"
       }
     },
     "4_creator_crm_whop": { "status": "not_started" },
@@ -35,5 +36,5 @@
       "workaroundInPlace": "planned: full adapter/domain/UI built against a mock/integration-test path"
     }
   ],
-  "nextAction": "Wave 3 Phase 3.4: packages/domain/src/replies.ts (persist + match inbound messages), packages/ai/src/operations/classifyReply.ts + a suggested-response operation, worker webhook-ingest processor against the Mock provider, reconciliation-polling job stub, reply inbox UI, tests"
+  "nextAction": "Begin Wave 4 (Creator CRM + Whop): CRM data model (relationship status, history, notes, tasks, next action, AI conversation summaries), then human-triggered Whop affiliate creation + polling-based conversion tracking against a Mock/integration-test Whop adapter, stopping only at the real Whop account/API-key boundary"
 }

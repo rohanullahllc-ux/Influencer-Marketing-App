@@ -705,7 +705,7 @@ export const inboundMessages = pgTable(
     classification: replyClassificationEnum("classification"),
     classificationConfidence: numeric("classification_confidence"),
     classificationLimitations: text("classification_limitations"),
-    extractedFacts: jsonb("extracted_facts"),
+    extractedFacts: jsonb("extracted_facts").$type<string[]>(),
     suggestedDraftId: uuid("suggested_draft_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
