@@ -1,0 +1,39 @@
+{
+  "lastUpdated": "2026-09-22",
+  "mainCommitAtStart": "94ccf53",
+  "branch": "claude/rdv-project-context-3ckcrw",
+  "prSourceOfTruthExcluded": ["claude-skill/digitalventures-influencer-ops-v1 (PR #7)"],
+  "waves": {
+    "0_2_foundation_core_safety": { "status": "done", "mergedCommit": "94ccf53", "tests": "181/181" },
+    "3_live_outreach_reply_intelligence": {
+      "status": "in_progress",
+      "phases": {
+        "3.1_schema": "pending",
+        "3.2_provider_abstraction_and_mock": "pending",
+        "3.3_send_execution_domain_and_worker": "pending",
+        "3.4_reply_intelligence": "pending",
+        "3.5_ui": "pending",
+        "3.6_regression_and_commit": "pending"
+      }
+    },
+    "4_creator_crm_whop": { "status": "not_started" },
+    "5_analytics": { "status": "not_started" },
+    "6_hardening": { "status": "not_started" },
+    "7_e2e_validation": { "status": "not_started" }
+  },
+  "externalBlockers": [
+    {
+      "id": "outreach-provider-decision",
+      "blocks": "live sending + live reply webhook ingestion",
+      "needsFromUser": "choose Gmail (Google Cloud OAuth + Pub/Sub) or a transactional email API (Resend/SendGrid/Postmark), then provide the account/credentials",
+      "workaroundInPlace": "Mock provider — deterministic, real, fully tested, no network calls"
+    },
+    {
+      "id": "whop-credentials",
+      "blocks": "live Whop affiliate creation + conversion polling (Wave 4)",
+      "needsFromUser": "Whop API key/account authorization",
+      "workaroundInPlace": "planned: full adapter/domain/UI built against a mock/integration-test path"
+    }
+  ],
+  "nextAction": "write migration 0007_wave3_outreach_send_and_reply.sql + schema.ts mirror, then Mock provider, then send-execution domain/worker/tests"
+}
