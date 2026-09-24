@@ -8,6 +8,12 @@ import "./processors/creatorDiscovery.js";
 import "./processors/creatorMatching.js";
 import "./processors/outreachDraft.js";
 import "./processors/dryRun.js";
+import "./processors/outreachSend.js";
+import "./processors/replyIntelligence.js";
+import "./processors/replyReconciliationPoll.js";
+import "./processors/creatorConversationSummary.js";
+import "./processors/creatorAffiliate.js";
+import "./processors/whopConversionPoll.js";
 
 const log = getLogger({ module: "worker" });
 

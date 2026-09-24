@@ -56,9 +56,31 @@ export interface SafetyGateContext {
   campaignStatus: string;
   sendingEnabled: boolean;
   isSuppressed: boolean;
+  /**
+   * Wave 6 hardening finding: creators.status/creator_relationships.status
+   * both carry a `do_not_contact` value, but nothing previously checked
+   * either at execution time -- a human could mark a creator "do not
+   * contact" in the CRM and the system would still happily send to them.
+   * This is deliberately never overridable (unlike the cross-campaign
+   * safeguard) -- it is a direct human instruction not to contact this
+   * creator, not a heuristic guard.
+   */
+  creatorDoNotContact: boolean;
   hasValidApproval: boolean;
   dailyCapReached: boolean;
   firstSendCapReached: boolean;
+  /**
+   * Wave 3: true when this recipient identity already has a real,
+   * non-blocked send outstanding under a *different* campaign in this
+   * workspace (product vision: "Cross-campaign contact safeguard with
+   * logged human override" — named as part of this same centralized
+   * gate, not a separate check). The override itself is a caller-supplied
+   * boolean, never something the gate decides on its own; the caller is
+   * responsible for logging the override (audit log), this function only
+   * decides whether to enforce it.
+   */
+  crossCampaignBlocked: boolean;
+  crossCampaignOverride: boolean;
   isDuplicate: boolean;
   scheduleValid: boolean;
   scheduleReason: string | null;
@@ -71,10 +93,12 @@ export interface SafetyGateResult {
 
 /**
  * Evaluates every check and collects every applicable reason (plan §12:
- * "each blocked row showing its exact reason(s)" — plural), in the exact
- * order the plan specifies: workspace active -> campaign active/not
- * paused -> kill switch -> suppression -> valid approval -> sending
- * limits -> first-send cap -> duplicate/idempotency -> schedule validity.
+ * "each blocked row showing its exact reason(s)" — plural), in the order
+ * named by docs/PRODUCT_VISION.md's safety-gate list: workspace active ->
+ * campaign active/not paused -> kill switch -> suppression -> creator
+ * marked do-not-contact (Wave 6 addition) -> valid approval -> sending
+ * limits -> first-send cap -> cross-campaign safeguard -> idempotency/
+ * duplicate -> schedule validity.
  */
 export function evaluateSafetyGate(ctx: SafetyGateContext): SafetyGateResult {
   const reasons: string[] = [];
@@ -83,9 +107,11 @@ export function evaluateSafetyGate(ctx: SafetyGateContext): SafetyGateResult {
   if (ctx.campaignStatus !== "active") reasons.push(`campaign_not_active_status_${ctx.campaignStatus}`);
   if (!ctx.sendingEnabled) reasons.push("workspace_sending_disabled");
   if (ctx.isSuppressed) reasons.push("suppressed");
+  if (ctx.creatorDoNotContact) reasons.push("creator_marked_do_not_contact");
   if (!ctx.hasValidApproval) reasons.push("no_valid_approval");
   if (ctx.dailyCapReached) reasons.push("daily_sending_limit_reached");
   if (ctx.firstSendCapReached) reasons.push("first_send_cap_reached");
+  if (ctx.crossCampaignBlocked && !ctx.crossCampaignOverride) reasons.push("cross_campaign_contact_safeguard");
   if (ctx.isDuplicate) reasons.push("duplicate_already_marked_eligible");
   if (!ctx.scheduleValid) reasons.push(ctx.scheduleReason ?? "outside_sending_window");
 

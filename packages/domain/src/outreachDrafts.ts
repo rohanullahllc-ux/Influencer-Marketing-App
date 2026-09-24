@@ -97,7 +97,14 @@ export async function resolveTemplateForCampaign(params: {
   });
 }
 
-/** Called only by the worker's `ai_personalize_outreach` job processor — always inserts a fresh draft. */
+/**
+ * Called only by the worker's `ai_personalize_outreach` job processor (or,
+ * as of Wave 3, the `reply_classify_and_suggest` job for an AI-suggested
+ * reply response) — always inserts a fresh draft. A suggested reply
+ * response is never sent directly: it becomes a normal draft here, so it
+ * goes through the exact same edit/approve/safety-gate/send pipeline as
+ * any other outreach.
+ */
 export async function persistOutreachDraft(params: {
   workspaceId: string;
   campaignId: string;
@@ -106,8 +113,9 @@ export async function persistOutreachDraft(params: {
   subject: string;
   body: string;
   generationInput: Record<string, unknown>;
+  inReplyToInboundMessageId?: string | null;
 }): Promise<OutreachDraft> {
-  const { workspaceId, campaignId, creatorId, templateId, subject, body, generationInput } = params;
+  const { workspaceId, campaignId, creatorId, templateId, subject, body, generationInput, inReplyToInboundMessageId = null } = params;
 
   return withWorkspace(workspaceId, async (tx) => {
     const row = oneOrThrow(
@@ -123,6 +131,7 @@ export async function persistOutreachDraft(params: {
           generationInput,
           provenance: "ai_derived",
           status: "draft",
+          inReplyToInboundMessageId,
         })
         .returning(),
       "insert outreach draft"

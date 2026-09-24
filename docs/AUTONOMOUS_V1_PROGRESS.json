@@ -1,0 +1,121 @@
+{
+  "lastUpdated": "2026-09-24",
+  "mainCommitAtStart": "94ccf53",
+  "branch": "claude/rdv-project-context-3ckcrw",
+  "prSourceOfTruthExcluded": ["claude-skill/digitalventures-influencer-ops-v1 (PR #7)"],
+  "waves": {
+    "0_2_foundation_core_safety": { "status": "done", "mergedCommit": "94ccf53", "tests": "181/181" },
+    "3_live_outreach_reply_intelligence": {
+      "status": "done",
+      "tests": "38 files / 212 tests",
+      "phases": {
+        "3.1_schema": "done",
+        "3.2_provider_abstraction_and_mock": "done",
+        "3.3_send_execution_domain_and_worker": "done",
+        "3.4_reply_intelligence": "done",
+        "3.5_ui": "done",
+        "3.6_regression_and_commit": "done"
+      }
+    },
+    "4_creator_crm_whop": {
+      "status": "done",
+      "tests": "43 files / 240 tests (28 new)",
+      "phases": {
+        "4.1_crm_schema": "done",
+        "4.2_crm_domain_and_ai_summary": "done",
+        "4.3_whop_schema": "done",
+        "4.4_whop_provider_and_worker": "done",
+        "4.5_api_and_ui": "done",
+        "4.6_regression_and_commit": "done"
+      },
+      "notes": [
+        "Creator CRM (creator_relationships/creator_notes/creator_tasks/creator_conversation_summaries) reuses outreach_sends/inbound_messages live for history rather than duplicating them.",
+        "No cross-platform creator-identity merging built (automatic or otherwise) -- the 'never auto-merge creator identities' constraint is satisfied by omission, not an extra guard.",
+        "whopProvider.ts/mockWhopProvider.ts mirror outreachProvider.ts's single-registry/single-active-implementation pattern exactly.",
+        "requestAffiliateCreation is admin-only and the sole code path that can create a creator_affiliates row -- never AI, never automatic.",
+        "Interruption safety for affiliate creation (pending -> creating -> terminal) proven by a +mockfail test, same pattern as Wave 3's outreach send.",
+        "pollWhopConversions reuses provider_mailbox_state (workspace+provider+cursor) instead of a new table.",
+        "No public Whop webhook endpoint built -- polling is the real primary path in V1, not a backstop; same reasoning as Wave 3's deferred reply webhook."
+      ]
+    },
+    "5_analytics": {
+      "status": "done",
+      "tests": "44 files / 243 tests (3 new)",
+      "phases": {
+        "5.1_domain_queries": "done",
+        "5.2_api_and_ui": "done",
+        "5.3_regression_and_commit": "done"
+      },
+      "notes": [
+        "getWorkspaceAnalytics + getCampaignAnalytics compute every number live from stored rows at read time -- no caching, no pre-computation.",
+        "Derived rates (e.g. average match score) always returned with their sampleSize; UI flags samples under 5.",
+        "Qualification failure reasons reused from the real measuredValues.reasons already persisted by Wave 2's qualifyCampaignCreators, not recomputed.",
+        "Whop conversion revenue summed per currency (array), never mixed into one misleading total.",
+        "No predictive ML or forecasting anywhere in this module."
+      ]
+    },
+    "6_hardening": {
+      "status": "done",
+      "tests": "49 files / 264 tests (21 new)",
+      "phases": {
+        "6.1_tenancy_rls_audit": "done",
+        "6.2_rbac_audit": "done",
+        "6.3_ai_safety_audit": "done",
+        "6.4_outreach_reply_safety": "done",
+        "6.5_job_reliability": "done",
+        "6.6_campaign_safety_auditability": "done",
+        "6.7_webhook_verification": "done",
+        "6.8_regression_and_commit": "done"
+      },
+      "realFindingsFixed": [
+        "Safety gate never checked creators.status/creator_relationships.status='do_not_contact' -- a human could mark a creator do-not-contact in the CRM and the system would still send. Fixed in both executeScheduledSend and performDryRunEvaluation; proven by real end-to-end tests.",
+        "/ops had zero authentication and was about to start showing real job payloads (workspace/creator/email data). Gated behind requireSession + Owner/Admin, same bar as /settings/integrations.",
+        "approveProductIntelligence and decideApproval (the two highest-stakes admin-only approval actions) had no test proving a Member-Operator is actually rejected. Added tests/domain.rbac.hardening.test.ts.",
+        "The Wave-1-flagged Operations TODO (removeOnFail: false 'the Operations surface (Wave 6) reads these') was still open -- built real failed-job visibility + a real, tested retry action."
+      ],
+      "confirmedSolidNoChangeNeeded": [
+        "RLS: all 29 tenant-scoped tables have RLS enabled+forced with the identical safe policy shape (live pg_class/pg_policies query, not just migration source).",
+        "RBAC: every actor-facing domain function enforces requireRole; every worker-only function is never called directly from an API route (verified by grep across the whole call graph).",
+        "AI safety: all 6 registered operations pass the hard-restriction check; no AI-triggered worker path ever calls a protected-state-changing function (updateCampaign/addSuppression/addMember/decideApproval/approveProductIntelligence).",
+        "No silent bypass of outreach_sends.status, creator_affiliates.status, or campaigns.status exists outside their one controlled write path each.",
+        "Suppression, kill switch, approval validity, content-pinning, idempotency, caps, cross-campaign safeguard, schedule validity, interruption safety, reply dedupe/ambiguous/unknown matching all still pass their existing tests unmodified."
+      ],
+      "built": [
+        "packages/lib/src/webhookVerification.ts: real, tested, provider-independent HMAC-SHA256 signature verification + replay-window check. Not wired to a public endpoint yet -- that is provider-specific and deferred to the real provider decision, per the mission's 'stop at the authenticated provider boundary' rule.",
+        "apps/web/lib/opsQueueDetail.ts + updated /ops page + POST /api/ops/jobs/:lane/:jobId/retry: real per-lane job-state counts, real failed-job list, stuck-job flag, real retry action, admin-gated."
+      ]
+    },
+    "7_e2e_validation": {
+      "status": "done",
+      "tests": "51 files / 269 tests (5 new)",
+      "phases": {
+        "7.1_full_chain_e2e": "done",
+        "7.2_negative_paths": "done",
+        "7.3_regression_typecheck_build": "done",
+        "7.4_final_branch_audit": "done"
+      },
+      "notes": [
+        "tests/e2e.v1.test.ts: one continuous test through the real 16-step chain (Product -> ... -> Analytics), asserting every rollup number against what was actually created.",
+        "tests/e2e.negativePaths.test.ts: 4 tests closing cross-feature gaps (stale approval blocks scheduleSend, unauthorized affiliate request creates zero rows, failed-vs-unknown distinction + safe no-op re-execution, a twice-failed job remains visible not lost).",
+        "main confirmed untouched at 94ccf53; merge-base with main is exactly 94ccf53 -- a clean 8-commit linear stack, no drift.",
+        "git grep across the whole tracked tree confirms zero references to the temporary Skill anywhere in the SaaS source."
+      ]
+    }
+  },
+  "externalBlockers": [
+    {
+      "id": "outreach-provider-decision",
+      "blocks": "live sending + live reply webhook ingestion",
+      "needsFromUser": "choose Gmail (Google Cloud OAuth + Pub/Sub) or a transactional email API (Resend/SendGrid/Postmark), then provide the account/credentials",
+      "workaroundInPlace": "Mock provider -- deterministic, real, fully tested, no network calls"
+    },
+    {
+      "id": "whop-credentials",
+      "blocks": "live Whop affiliate creation + conversion polling",
+      "needsFromUser": "Whop API key/account authorization",
+      "workaroundInPlace": "Full pipeline built and tested (domain, worker, API, UI) against a Mock provider -- resolveWhopProviderName() is the single function that changes once real credentials exist"
+    }
+  ],
+  "v1Status": "COMPLETE -- all seven waves done. Not merged into main; awaiting explicit user approval per the mission's explicit instruction to stop before merging.",
+  "nextAction": "Nothing further to build for V1. Waiting for explicit user approval to merge claude/rdv-project-context-3ckcrw into main. Once approved: merge (non-squash, preserving commit history, per established convention), then real work resumes only when the user supplies the outreach-provider decision + credentials and/or Whop credentials -- both integrations are fully built and tested against their Mock providers and need no further code changes to accept real credentials beyond resolveOutreachProviderName()/resolveWhopProviderName()."
+}
