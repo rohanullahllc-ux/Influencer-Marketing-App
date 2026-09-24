@@ -54,7 +54,37 @@
         "No predictive ML or forecasting anywhere in this module."
       ]
     },
-    "6_hardening": { "status": "not_started" },
+    "6_hardening": {
+      "status": "done",
+      "tests": "49 files / 264 tests (21 new)",
+      "phases": {
+        "6.1_tenancy_rls_audit": "done",
+        "6.2_rbac_audit": "done",
+        "6.3_ai_safety_audit": "done",
+        "6.4_outreach_reply_safety": "done",
+        "6.5_job_reliability": "done",
+        "6.6_campaign_safety_auditability": "done",
+        "6.7_webhook_verification": "done",
+        "6.8_regression_and_commit": "done"
+      },
+      "realFindingsFixed": [
+        "Safety gate never checked creators.status/creator_relationships.status='do_not_contact' -- a human could mark a creator do-not-contact in the CRM and the system would still send. Fixed in both executeScheduledSend and performDryRunEvaluation; proven by real end-to-end tests.",
+        "/ops had zero authentication and was about to start showing real job payloads (workspace/creator/email data). Gated behind requireSession + Owner/Admin, same bar as /settings/integrations.",
+        "approveProductIntelligence and decideApproval (the two highest-stakes admin-only approval actions) had no test proving a Member-Operator is actually rejected. Added tests/domain.rbac.hardening.test.ts.",
+        "The Wave-1-flagged Operations TODO (removeOnFail: false 'the Operations surface (Wave 6) reads these') was still open -- built real failed-job visibility + a real, tested retry action."
+      ],
+      "confirmedSolidNoChangeNeeded": [
+        "RLS: all 29 tenant-scoped tables have RLS enabled+forced with the identical safe policy shape (live pg_class/pg_policies query, not just migration source).",
+        "RBAC: every actor-facing domain function enforces requireRole; every worker-only function is never called directly from an API route (verified by grep across the whole call graph).",
+        "AI safety: all 6 registered operations pass the hard-restriction check; no AI-triggered worker path ever calls a protected-state-changing function (updateCampaign/addSuppression/addMember/decideApproval/approveProductIntelligence).",
+        "No silent bypass of outreach_sends.status, creator_affiliates.status, or campaigns.status exists outside their one controlled write path each.",
+        "Suppression, kill switch, approval validity, content-pinning, idempotency, caps, cross-campaign safeguard, schedule validity, interruption safety, reply dedupe/ambiguous/unknown matching all still pass their existing tests unmodified."
+      ],
+      "built": [
+        "packages/lib/src/webhookVerification.ts: real, tested, provider-independent HMAC-SHA256 signature verification + replay-window check. Not wired to a public endpoint yet -- that is provider-specific and deferred to the real provider decision, per the mission's 'stop at the authenticated provider boundary' rule.",
+        "apps/web/lib/opsQueueDetail.ts + updated /ops page + POST /api/ops/jobs/:lane/:jobId/retry: real per-lane job-state counts, real failed-job list, stuck-job flag, real retry action, admin-gated."
+      ]
+    },
     "7_e2e_validation": { "status": "not_started" }
   },
   "externalBlockers": [
@@ -71,5 +101,5 @@
       "workaroundInPlace": "Full pipeline built and tested (domain, worker, API, UI) against a Mock provider -- resolveWhopProviderName() is the single function that changes once real credentials exist"
     }
   ],
-  "nextAction": "Begin Wave 6 (Safety/Operations/Reliability Hardening): audit the full V1 implementation against PRODUCT_VISION.md's security & safety rules (tenancy/RLS, RBAC, AI boundaries, outreach safety gate, reply handling, job retries/interruption safety, campaign pause/kill-switch, auditability); real webhook signature verification + replay protection (deferred from Wave 3, paired with the eventual provider decision) and a queue dead-letter/stuck-job review across all lanes are the two known focus areas. Fix real issues found; never weaken a safety rule or test to pass it."
+  "nextAction": "Begin Wave 7 (Complete End-to-End V1 Validation): exercise the full real chain (Product -> Product Intelligence -> human approval -> Discovery -> Qualification -> Matching -> Campaign -> Outreach Draft -> human Approval -> Safety Gate -> Send Execution -> Reply Ingestion -> Reply Intelligence -> Creator CRM -> human-triggered Affiliate workflow -> Conversion -> Analytics) through real production domain services in one continuous test, plus the full negative-path list (AI failure, provider failure, interrupted/unknown/duplicate send, duplicate reply, stale approval, suppressed/do-not-contact creator, kill switch, invalid permission, cross-workspace access, failed retry, reconciliation). Then a final full-branch audit and merge-readiness report; do not merge without explicit approval."
 }

@@ -13,6 +13,7 @@ function baseContext(overrides: Partial<SafetyGateContext> = {}): SafetyGateCont
     campaignStatus: "active",
     sendingEnabled: true,
     isSuppressed: false,
+    creatorDoNotContact: false,
     hasValidApproval: true,
     dailyCapReached: false,
     firstSendCapReached: false,
@@ -36,6 +37,12 @@ describe("Safety gate — evaluateSafetyGate", () => {
     const result = evaluateSafetyGate(baseContext({ isSuppressed: true, hasValidApproval: true }));
     expect(result.eligible).toBe(false);
     expect(result.blockReasons).toContain("suppressed");
+  });
+
+  it("Wave 6: a creator marked do-not-contact is blocked regardless of a valid approval, and never overridable", () => {
+    const result = evaluateSafetyGate(baseContext({ creatorDoNotContact: true, hasValidApproval: true }));
+    expect(result.eligible).toBe(false);
+    expect(result.blockReasons).toContain("creator_marked_do_not_contact");
   });
 
   it("no valid approval blocks, even if everything else is healthy", () => {

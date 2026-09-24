@@ -39,7 +39,13 @@ own docs + code are authoritative, per the mission.
   typecheck, clean build. See "Wave 4 — detailed checklist" below.
 - Wave 5 (Analytics): **done**. 44 files / 243 tests, clean typecheck,
   clean build. See "Wave 5 — detailed checklist" below.
-- Wave 6 (Hardening): not started
+- Wave 6 (Safety/Operations/Reliability Hardening): **done**. 49 files /
+  264 tests, clean typecheck, clean build. Found and fixed one real
+  safety gap (creator do-not-contact wasn't enforced), closed a Wave-1-
+  flagged Operations TODO (real failed-job visibility + retry), and
+  closed two untested admin-only approval-boundary gaps. See "Wave 6 —
+  detailed checklist" below.
+- Wave 7 (End-to-End V1 Validation): not started
 - Wave 7 (E2E Validation): not started
 
 ## Branch
@@ -315,13 +321,167 @@ branch restarts from current main rather than stacking on old history).
       `/analytics` and both new API routes present
 - [x] Commit + push this checkpoint
 
+## Wave 6 — Safety / Operations / Reliability Hardening (detailed checklist) — DONE
+
+Audit method throughout: prefer ground-truth queries (live `pg_policies`/
+`pg_class` state, grep across the actual call graph) over trusting
+prior documentation, per the mission's "do not assume the previous
+session's textual status is correct" instruction — every claim below was
+independently re-verified in this wave, not carried forward from Wave 1-5
+comments.
+
+### 6.1 Tenancy / RLS — audited, confirmed solid, proof added
+- [x] Live-queried `pg_class`/`pg_policies` (not just migration source):
+      **every** one of the 29 tenant-scoped tables has RLS enabled AND
+      forced, with the exact identical `nullif(...)` policy shape — zero
+      drift, zero exceptions beyond the three documented ones
+      (`schema_migrations`, `users`, `workspaces`)
+- [x] Added `tests/db.rls.hardening.test.ts`: an exhaustive, self-
+      verifying structural test (queries `pg_class`/`pg_policies` live —
+      fails immediately if a future table is ever added without RLS,
+      rather than trusting a maintained list) + real cross-workspace
+      behavioral proof for one representative table from each later wave
+      (Wave 2 product/campaign/creator, Wave 3 reply, Wave 4 CRM/Whop),
+      including a direct-object-reference test (selecting workspace A's
+      exact row id while scoped to workspace B returns nothing)
+
+### 6.2 RBAC — audited, two real test-coverage gaps closed
+- [x] Confirmed every API route calls `requireSession()` except the three
+      legitimate, documented exceptions (`/api/auth/[...nextauth]`,
+      `/api/setup-account`, `/api/health`)
+- [x] Confirmed every domain function taking a real `actorUserId` enforces
+      `requireRole`; confirmed every worker-only/system-initiated function
+      (no `actorUserId` in its signature, by design) is never called
+      directly from an API route — grepped the entire call graph, zero
+      matches
+- [x] **Real gap found and closed**: `approveProductIntelligence` and
+      `decideApproval` are both documented admin-only — the two highest-
+      stakes "human approval boundary" actions in the product — but
+      neither had a test proving a Member-Operator is actually rejected.
+      Added `tests/domain.rbac.hardening.test.ts` (2 tests) closing both
+
+### 6.3 AI safety — audited, confirmed solid, proof added
+- [x] Confirmed `FORBIDDEN_AI_OPERATION_SUBSTRINGS` covers send/approve/
+      createaffiliate/automerge/merge_creator/modifypermission/
+      disablesuppression/activatecampaign; confirmed all 6 real registered
+      operations (including Wave 4's `summarize_creator_conversation`)
+      pass the check
+- [x] Confirmed (by grep across every worker processor) that no AI-
+      triggered code path ever calls `updateCampaign`, `addSuppression`,
+      `addMember`, `decideApproval`, or `approveProductIntelligence` —
+      AI-derived writes only ever land in draft/suggestion/classification
+      tables (`outreach_drafts`, `creator_matches`,
+      `creator_conversation_summaries`, `inbound_messages`'s
+      classification fields), never an authoritative table
+- [x] Added `tests/ai.hardening.test.ts`: a self-verifying regression
+      guard asserting every currently-registered AI operation name passes
+      the restriction check (not just a hand-picked example)
+
+### 6.4 Outreach / reply safety — one real safety gap found and fixed
+- [x] **Real gap found and fixed**: `creators.status` and (new in Wave 4)
+      `creator_relationships.status` both carry a `do_not_contact` value,
+      but the safety gate never checked either — a human could mark a
+      creator do-not-contact in the CRM and the system would still
+      schedule/send to them. Fixed properly: `SafetyGateContext` gained a
+      `creatorDoNotContact` field (never overridable, unlike the cross-
+      campaign safeguard), checked in both `executeScheduledSend` (real
+      execution) and `performDryRunEvaluation` (preview) so the two never
+      disagree. Proven by real end-to-end tests in both
+      `tests/domain.outreachSend.test.ts` and `tests/domain.dryRun.test.ts`
+      (mark do-not-contact *after* scheduling, exactly like the existing
+      suppression test, to prove real re-evaluation) plus a pure-function
+      case in `tests/domain.safetyGate.test.ts`
+- [x] Re-confirmed (unchanged, still correct): suppression, kill switch,
+      approval validity, content-pinned approval invalidation,
+      idempotency, first-send cap, cross-campaign safeguard + override,
+      schedule validity, interruption safety, reply dedupe, ambiguous/
+      unknown creator matching — all still pass their existing Wave 2/3
+      tests unmodified
+
+### 6.5 Job reliability — closed the Wave-1-flagged Operations TODO
+- [x] `packages/queue/src/queues.ts`'s `removeOnFail: false` was set in
+      Wave 1 specifically so this data would still be available once
+      Wave 6 built a surface for it (its own comment said so) — that
+      surface didn't exist until now. Built `apps/web/lib/
+      opsQueueDetail.ts`: real per-lane state counts (waiting/active/
+      delayed/failed/completed), a real failed-jobs list with the actual
+      `failedReason` (never fabricated), and a "possibly stuck" flag for
+      an active job processing longer than 2 minutes
+- [x] Added a real retry action (`POST /api/ops/jobs/:lane/:jobId/retry`,
+      admin-only) — calls the actual BullMQ `job.retry()`, safe by
+      construction because every state-mutating processor in this system
+      is already idempotent/interruption-safe (proven in Waves 3-4)
+- [x] **Real gap found and fixed**: `/ops` had no authentication at all.
+      Fixed before it started showing real job payloads (workspace/
+      creator/email data): now gated the same way `/settings/
+      integrations` is (`requireSession` + Owner/Admin only).
+      `/api/health` stays deliberately unauthenticated (documented,
+      correct — it's a machine liveness probe, not a human dashboard)
+- [x] Proven end-to-end in `tests/ops.queueDetail.test.ts`: a real job
+      genuinely fails, appears with its real reason, gets retried via the
+      exact call the API route makes, and genuinely reaches a terminal
+      success — not a simulated result
+- [x] Confirmed (analysis, no code needed): BullMQ's own stalled-job
+      detection (default `Worker` config, no overrides in this codebase)
+      already handles a hard process crash mid-job by re-queuing the
+      *same* job id — which lands on the exact interruption-safety logic
+      already built and tested in Wave 3/4 (`sending`/`creating` row
+      states), so a real crash and a BullMQ-driven stalled retry are both
+      already handled correctly by the same code path
+
+### 6.6 Campaign safety / Auditability — audited, confirmed solid
+- [x] Confirmed no code path outside `outreachSend.ts` ever writes
+      `outreach_sends.status`, no code path outside `creatorAffiliate.ts`
+      ever writes `creator_affiliates.status`, and no code path outside
+      `campaigns.ts`'s `updateCampaign` ever writes `campaigns.status` —
+      grepped every `.update(...)` call site in `packages/domain`, zero
+      bypasses found
+- [x] Confirmed `updateCampaign` (the pause/kill-switch/activate path)
+      writes an audit log entry with the full patch (including `status`)
+      every time; confirmed `decideApproval` audits every decision as
+      `approval.${decision}`; confirmed every Wave 4 affiliate/CRM action
+      is audited (already built correctly in Wave 4, re-verified here)
+
+### 6.7 Webhook signature verification + replay protection
+- [x] Built `packages/lib/src/webhookVerification.ts`: real,
+      provider-independent HMAC-SHA256 signature verification
+      (constant-time comparison via `timingSafeEqual`, never a raw `===`)
+      plus a replay-window check (rejects both stale AND future-dated
+      timestamps). This is genuinely reusable infrastructure, not
+      speculative scaffolding — HMAC-over-raw-body is the scheme the
+      large majority of real providers use (Stripe, GitHub, Resend, and
+      per Whop's own public docs, Whop itself)
+- [x] Deliberately did NOT wire this into a public HTTP endpoint — same
+      reasoning as Wave 3's deferral: which HTTP header carries the
+      signature, how the signed string is formatted, and where a
+      provider's secret is stored per-workspace are all real provider-
+      specific decisions that depend on which provider gets selected.
+      That wiring is the exact "authenticated provider boundary" this
+      mission says to stop at, not before
+- [x] Event-ID-based replay protection is already real and live (built in
+      Wave 3, re-confirmed here): `inbound_messages`' unique index on
+      `(workspace_id, provider, provider_message_id)`
+- [x] Proven in `tests/lib.webhookVerification.test.ts` (8 tests): a
+      genuinely valid signature is accepted, a tampered payload is
+      rejected even against a signature valid for the original, a
+      wrong-secret signature is rejected, a malformed signature never
+      throws, and both stale and future-dated timestamps are rejected
+
+### 6.8 Regression + commit
+- [x] Full suite: 49 files / 264 tests passing (243 prior + 21 new); `tsc
+      --noEmit` clean; `next build` clean with every new/changed route
+      present
+- [x] Commit + push this checkpoint
+
 ## External blockers (need the user)
 
 1. **Outreach send provider decision.** No provider selected in the repo.
    Needs: which provider (Gmail via Google Cloud OAuth + Pub/Sub, or a
    transactional API like Resend/SendGrid/Postmark — each has a different
    auth/webhook model), plus the actual account/credentials, which I cannot
-   create or authorize myself.
+   create or authorize myself. The signature-verification primitive this
+   provider's real webhook endpoint will need is now built and tested
+   (see 6.7) — only the provider-specific wiring remains once chosen.
 2. **Whop API credentials.** No account/API key configured;
    `integration_credentials` is empty. The full affiliate-creation +
    conversion-polling pipeline (domain, worker, API, UI, tests) is now
@@ -334,17 +494,23 @@ Everything else continues automatically without waiting on these.
 
 ## Exact next action
 
-Wave 5 is functionally complete (workspace-wide and per-campaign analytics
-rollups across every build area, all backed by real stored data, observed
-counts kept strictly distinct from derived rates with sample sizes shown —
-44 test files / 243 tests passing, clean typecheck + build). Next: begin
-Wave 6 (Safety/Operations/Reliability Hardening) — audit the entire V1
-implementation against docs/PRODUCT_VISION.md's "security & safety rules
-that must never be weakened" (tenancy/RLS, authorization/RBAC, AI
-boundaries, outreach safety gate, replies, jobs/retries/interruption
-safety, campaign pause/kill-switch, auditability), with particular focus
-on the two things explicitly deferred here: real webhook signature
-verification + replay protection (paired with whichever provider decision
-eventually lands) and a general pass over queue/job dead-letter and stuck-
-job handling across all lanes. Fix any real issue found; never weaken a
-safety rule or test to make it pass.
+Wave 6 is functionally complete (tenancy/RLS/RBAC/AI-safety audited and
+confirmed solid with new regression-proof tests; one real safety gap found
+and fixed — creator do-not-contact wasn't enforced by the send gate; the
+Wave-1-flagged Operations TODO closed with real failed-job visibility +
+retry, now properly authenticated; a real, tested, provider-independent
+webhook signature-verification primitive built — 49 test files / 264 tests
+passing, clean typecheck + build). Next: begin Wave 7 (Complete End-to-End
+V1 Validation) — exercise the full real chain (Product → Product
+Intelligence → human approval → Creator Discovery → Qualification →
+Matching → Campaign → Outreach Draft → human Approval → Safety Gate → Send
+Execution → Reply Ingestion → Reply Intelligence → Creator CRM →
+human-triggered Affiliate workflow → Conversion → Analytics) through the
+real production domain services in one continuous test, plus the full
+negative-path list from the mission (AI failure, provider failure,
+interrupted/unknown/duplicate send, duplicate reply, stale approval,
+suppressed/do-not-contact creator, kill switch, invalid permission,
+cross-workspace access, failed retry, reconciliation) — then a final full-
+branch audit (regression, typecheck, build, and a summary confirming the
+temporary Skill remains completely separate) before reporting a
+merge-ready state and stopping for explicit approval.

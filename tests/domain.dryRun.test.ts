@@ -13,6 +13,7 @@ import {
   performDryRunEvaluation,
   getDryRunRunStatus,
   getDryRunEvaluation,
+  updateCreatorRelationship,
 } from "@rdv/domain";
 import { createWorkspaceWithOwner, getUserByEmail } from "@rdv/auth";
 import { QUEUE_LANES, getQueue, closeAllQueues, closeRedisConnection } from "@rdv/queue";
@@ -121,6 +122,17 @@ describe("Dry Run", () => {
     // Both remaining creators share the same tight sendingWindow, so
     // whichever way "now" falls, they must agree with each other.
     expect(byCreator.get(eligible.id)?.eligible).toBe(byCreator.get(outOfWindow.id)?.eligible);
+  });
+
+  it("Wave 6 hardening: a creator marked do-not-contact in the CRM is blocked in the preview -- previews and real execution must always agree", async () => {
+    const creator = await approvedCreator("DNC Cook", "dnc@example.com");
+    await updateCreatorRelationship({ workspaceId: wsId, actorUserId: ownerId, creatorId: creator.id, status: "do_not_contact" });
+
+    const { evaluationId } = await performDryRunEvaluation({ workspaceId: wsId, actorUserId: ownerId, campaignId });
+    const { results } = await getDryRunEvaluation({ workspaceId: wsId, actorUserId: ownerId, evaluationId });
+
+    expect(results[0]?.eligible).toBe(false);
+    expect(results[0]?.blockReasons).toContain("creator_marked_do_not_contact");
   });
 
   it("a paused campaign blocks every creator, regardless of approval", async () => {

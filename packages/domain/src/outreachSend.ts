@@ -13,7 +13,7 @@ import { getOutreachProvider, resolveOutreachProviderName } from "./outreachProv
 // operations self-register on import.
 import "./providers/mockOutreachProvider.js";
 
-const { workspaces, campaigns, creators, approvals, outreachSends, outreachSendAttempts, workspaceMembers } = schema;
+const { workspaces, campaigns, creators, approvals, outreachSends, outreachSendAttempts, workspaceMembers, creatorRelationships } = schema;
 
 /**
  * Wave 3 (Live Outreach + Reply Intelligence): real send execution against
@@ -221,6 +221,17 @@ export async function executeScheduledSend(params: { workspaceId: string; outrea
     if (!approval) throw new NotFoundError(`No approval with id ${send.approvalId}`);
 
     const suppressed = await isSuppressed({ workspaceId, identity: send.recipientIdentity });
+    const [relationship] = await tx
+      .select({ status: creatorRelationships.status })
+      .from(creatorRelationships)
+      .where(eq(creatorRelationships.creatorId, send.creatorId))
+      .limit(1);
+    // Checks both the CRM relationship status (Wave 4, the reachable
+    // write path) and the creator's own status (Wave 2 schema also
+    // carries this value) -- a direct human "do not contact" instruction
+    // from either source is never overridable, unlike the cross-campaign
+    // safeguard.
+    const creatorDoNotContact = relationship?.status === "do_not_contact" || creator.status === "do_not_contact";
     const crossCampaignBlocked = await hasActiveCrossCampaignContact(tx, {
       workspaceId,
       campaignId: send.campaignId,
@@ -265,6 +276,7 @@ export async function executeScheduledSend(params: { workspaceId: string; outrea
       campaignStatus: campaign.status,
       sendingEnabled: workspace.sendingEnabled,
       isSuppressed: suppressed,
+      creatorDoNotContact,
       hasValidApproval: approval.status === "approved",
       dailyCapReached,
       firstSendCapReached,

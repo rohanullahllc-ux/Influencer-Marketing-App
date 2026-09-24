@@ -14,6 +14,7 @@ import {
   getOutreachSend,
   executeScheduledSend,
   computeIdempotencyKey,
+  updateCreatorRelationship,
 } from "@rdv/domain";
 import { createWorkspaceWithOwner, getUserByEmail } from "@rdv/auth";
 import { withWorkspace, schema } from "@rdv/db";
@@ -136,6 +137,20 @@ describe("Outreach Send Execution (Wave 3)", () => {
     expect(result.status).toBe("blocked");
     const final = await getOutreachSend({ workspaceId: wsId, actorUserId: ownerId, outreachSendId: scheduled.id });
     expect(final.statusReason).toContain("suppressed");
+    expect(final.providerMessageId).toBeNull();
+  });
+
+  it("Wave 6 hardening: blocks a creator marked do-not-contact in the CRM at execution time, even though it was scheduled while eligible", async () => {
+    const { approval, creator } = await approvedCreator("Cook", "cook@example.com");
+    const scheduled = await scheduleSend({ workspaceId: wsId, actorUserId: ownerId, approvalId: approval.id });
+
+    // Marked do-not-contact *after* scheduling -- proves execution re-checks for real, same pattern as the suppression test above.
+    await updateCreatorRelationship({ workspaceId: wsId, actorUserId: ownerId, creatorId: creator.id, status: "do_not_contact" });
+
+    const result = await executeScheduledSend({ workspaceId: wsId, outreachSendId: scheduled.id });
+    expect(result.status).toBe("blocked");
+    const final = await getOutreachSend({ workspaceId: wsId, actorUserId: ownerId, outreachSendId: scheduled.id });
+    expect(final.statusReason).toContain("creator_marked_do_not_contact");
     expect(final.providerMessageId).toBeNull();
   });
 

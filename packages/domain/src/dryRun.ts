@@ -17,6 +17,7 @@ const {
   dryRunEvaluations,
   dryRunEvaluationResults,
   workspaceMembers,
+  creatorRelationships,
 } = schema;
 
 /**
@@ -136,6 +137,12 @@ export async function performDryRunEvaluation(params: {
         .limit(1);
 
       const suppressed = await isSuppressed({ workspaceId, identity: creator.contactEmail });
+      const [relationship] = await tx
+        .select({ status: creatorRelationships.status })
+        .from(creatorRelationships)
+        .where(eq(creatorRelationships.creatorId, creator.id))
+        .limit(1);
+      const creatorDoNotContact = relationship?.status === "do_not_contact" || creator.status === "do_not_contact";
       const crossCampaignBlocked = await hasActiveCrossCampaignContact(tx, {
         workspaceId,
         campaignId,
@@ -158,6 +165,7 @@ export async function performDryRunEvaluation(params: {
         campaignStatus: campaign.status,
         sendingEnabled: workspace.sendingEnabled,
         isSuppressed: suppressed,
+        creatorDoNotContact,
         hasValidApproval: Boolean(approval),
         dailyCapReached: wouldExceedDailyCap,
         firstSendCapReached: wouldExceedFirstSendCap,
