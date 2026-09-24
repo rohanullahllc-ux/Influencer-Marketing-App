@@ -28,6 +28,9 @@ import "./operations/personalizeOutreach.js";
 // never sends (see each operation's own doc comment).
 import "./operations/classifyReply.js";
 import "./operations/draftReplyResponse.js";
+// Wave 4: creator conversation summarization — read-only, never takes
+// action (see the operation's own doc comment).
+import "./operations/summarizeCreatorConversation.js";
 
 export { getWorkspaceAnthropicClient } from "./client.js";
 export type { AnalyzeProductInput, AnalyzeProductOutput } from "./operations/analyzeProduct.js";
@@ -35,3 +38,4 @@ export type { ExplainCreatorMatchInput, ExplainCreatorMatchOutput } from "./oper
 export type { PersonalizeOutreachInput, PersonalizeOutreachOutput } from "./operations/personalizeOutreach.js";
 export type { ClassifyReplyInput, ClassifyReplyOutput } from "./operations/classifyReply.js";
 export type { DraftReplyResponseInput, DraftReplyResponseOutput } from "./operations/draftReplyResponse.js";
+export type { SummarizeCreatorConversationInput, SummarizeCreatorConversationOutput } from "./operations/summarizeCreatorConversation.js";

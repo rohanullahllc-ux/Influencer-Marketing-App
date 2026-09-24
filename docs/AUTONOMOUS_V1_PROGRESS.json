@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-09-22",
+  "lastUpdated": "2026-09-24",
   "mainCommitAtStart": "94ccf53",
   "branch": "claude/rdv-project-context-3ckcrw",
   "prSourceOfTruthExcluded": ["claude-skill/digitalventures-influencer-ops-v1 (PR #7)"],
@@ -17,7 +17,27 @@
         "3.6_regression_and_commit": "done"
       }
     },
-    "4_creator_crm_whop": { "status": "not_started" },
+    "4_creator_crm_whop": {
+      "status": "done",
+      "tests": "43 files / 240 tests (28 new)",
+      "phases": {
+        "4.1_crm_schema": "done",
+        "4.2_crm_domain_and_ai_summary": "done",
+        "4.3_whop_schema": "done",
+        "4.4_whop_provider_and_worker": "done",
+        "4.5_api_and_ui": "done",
+        "4.6_regression_and_commit": "done"
+      },
+      "notes": [
+        "Creator CRM (creator_relationships/creator_notes/creator_tasks/creator_conversation_summaries) reuses outreach_sends/inbound_messages live for history rather than duplicating them.",
+        "No cross-platform creator-identity merging built (automatic or otherwise) -- the 'never auto-merge creator identities' constraint is satisfied by omission, not an extra guard.",
+        "whopProvider.ts/mockWhopProvider.ts mirror outreachProvider.ts's single-registry/single-active-implementation pattern exactly.",
+        "requestAffiliateCreation is admin-only and the sole code path that can create a creator_affiliates row -- never AI, never automatic.",
+        "Interruption safety for affiliate creation (pending -> creating -> terminal) proven by a +mockfail test, same pattern as Wave 3's outreach send.",
+        "pollWhopConversions reuses provider_mailbox_state (workspace+provider+cursor) instead of a new table.",
+        "No public Whop webhook endpoint built -- polling is the real primary path in V1, not a backstop; same reasoning as Wave 3's deferred reply webhook."
+      ]
+    },
     "5_analytics": { "status": "not_started" },
     "6_hardening": { "status": "not_started" },
     "7_e2e_validation": { "status": "not_started" }
@@ -27,14 +47,14 @@
       "id": "outreach-provider-decision",
       "blocks": "live sending + live reply webhook ingestion",
       "needsFromUser": "choose Gmail (Google Cloud OAuth + Pub/Sub) or a transactional email API (Resend/SendGrid/Postmark), then provide the account/credentials",
-      "workaroundInPlace": "Mock provider — deterministic, real, fully tested, no network calls"
+      "workaroundInPlace": "Mock provider -- deterministic, real, fully tested, no network calls"
     },
     {
       "id": "whop-credentials",
-      "blocks": "live Whop affiliate creation + conversion polling (Wave 4)",
+      "blocks": "live Whop affiliate creation + conversion polling",
       "needsFromUser": "Whop API key/account authorization",
-      "workaroundInPlace": "planned: full adapter/domain/UI built against a mock/integration-test path"
+      "workaroundInPlace": "Full pipeline built and tested (domain, worker, API, UI) against a Mock provider -- resolveWhopProviderName() is the single function that changes once real credentials exist"
     }
   ],
-  "nextAction": "Begin Wave 4 (Creator CRM + Whop): CRM data model (relationship status, history, notes, tasks, next action, AI conversation summaries), then human-triggered Whop affiliate creation + polling-based conversion tracking against a Mock/integration-test Whop adapter, stopping only at the real Whop account/API-key boundary"
+  "nextAction": "Begin Wave 5 (Analytics): domain queries/services for observed counts across product/discovery/qualification/matching/campaign/outreach/replies/CRM/Whop-conversion -- backed by real stored data only, observed vs. calculated vs. estimated kept strictly distinct, explicit small-sample-size handling, campaign-level and workspace-level views, API routes + UI, tests. No predictive ML or forecasting."
 }

@@ -33,8 +33,10 @@ own docs + code are authoritative, per the mission.
 - Wave 0–2: **done**, merged to `main` (commit `94ccf53`). 181/181 tests,
   clean typecheck, clean build (verified in a prior session; see PR history
   #1–#6).
-- Wave 3 (Live Outreach + Reply Intelligence): **in progress**
-- Wave 4 (Creator CRM + Whop): not started
+- Wave 3 (Live Outreach + Reply Intelligence): **done**. 38 files / 212
+  tests, clean typecheck, clean build.
+- Wave 4 (Creator CRM + Whop): **done**. 43 files / 240 tests, clean
+  typecheck, clean build. See "Wave 4 — detailed checklist" below.
 - Wave 5 (Analytics): not started
 - Wave 6 (Hardening): not started
 - Wave 7 (E2E Validation): not started
@@ -180,6 +182,92 @@ branch restarts from current main rather than stacking on old history).
       component
 - [x] Commit + push this checkpoint
 
+## Wave 4 — Creator CRM + Whop (detailed checklist) — DONE
+
+### 4.1/4.2 Creator CRM (migration 0010)
+- [x] `creator_relationships` (one row per workspace+creator, lazily
+      materialized to `'new'` on first read), `creator_notes` (append-
+      only), `creator_tasks` (open/done/cancelled, optional campaign
+      link), `creator_conversation_summaries` (append-only, AI-derived) —
+      all RLS-protected in the exact 0004 shape
+- [x] `packages/domain/src/creatorCrm.ts`: relationship get/update
+      (partial-update upsert), notes add/list, tasks create/list/status,
+      `getCreatorHistory` — reads real `outreach_sends`/`inbound_messages`
+      live, **never duplicates them into a CRM table** (mission
+      instruction: "reuse existing entities... rather than duplicating")
+- [x] `summarize_creator_conversation` AI operation (`packages/ai`) +
+      worker processor (`apps/worker/src/processors/
+      creatorConversationSummary.ts`) — read-only, grounded strictly in
+      the real thread passed in, never fabricates facts; same AI-call-
+      lives-in-the-worker layering as every prior wave
+- [x] No cross-platform creator-identity merging was built (automatic or
+      otherwise) — the product vision's "never auto-merge creator
+      identities" constraint is satisfied by not building a merge feature
+      at all, not by an extra guard
+- [x] Tests: `domain.creatorCrm.test.ts` (12), `worker.
+      creatorConversationSummary.test.ts` (1, real BullMQ, fails loudly
+      without an Anthropic key — same convention as every AI-backed
+      worker test in this build)
+
+### 4.3/4.4 Whop Affiliate/Conversion (migrations 0011–0012)
+- [x] `creator_affiliates` (workspace-scoped idempotency key, `pending` →
+      `creating` → `active`/`failed`/`unknown`/`revoked`), `creator_
+      affiliate_attempts` (append-only, mirrors `outreach_send_attempts`),
+      `whop_conversions` (deduped on workspace+provider+event id, exactly
+      like `inbound_messages`' webhook dedupe) — all RLS-protected
+- [x] `packages/domain/src/whopProvider.ts` + `providers/
+      mockWhopProvider.ts`: mirrors `outreachProvider.ts`'s registry
+      pattern deliberately (one centralized abstraction, single active
+      Mock implementation) — the existing `credential_provider` enum
+      already carries a dedicated `whop` slot, the same architectural hook
+      the outreach provider decision uses
+- [x] `packages/domain/src/creatorAffiliate.ts`: `requestAffiliateCreation`
+      is **admin-only** (matches the existing bar for "the action that
+      makes an external commitment", same as `decideApproval`) and is the
+      one and only code path that can create a `creator_affiliates` row —
+      never AI, never automatic, per "AI may never... create affiliates"
+- [x] **Interruption safety, proven by test**: an affiliate found already
+      `creating` (crash after contacting the provider) is marked `unknown`
+      and the provider is never called again — verified with a
+      `+mockfail` identity that would expose a blind retry
+- [x] `pollWhopConversions`: real polling loop over every `active`
+      affiliate against the provider abstraction; reuses the existing
+      `provider_mailbox_state` table (workspace+provider+cursor — already
+      generic, not reply-specific) instead of a near-duplicate table
+- [x] Deliberately did NOT build a public Whop webhook endpoint — Whop
+      conversions in V1 are polling-only by design (no signing scheme to
+      verify against yet, same reasoning as Wave 3's deferred reply
+      webhook); the poll job is the real primary path here, not a backstop
+- [x] Tests: `domain.creatorAffiliate.test.ts` (16 — happy path, admin-only
+      RBAC, idempotency, unknown/failed outcomes, interruption safety,
+      safe no-op re-execution, conversion ingestion + dedupe, real poll
+      execution), `worker.creatorAffiliate.test.ts` (1, real BullMQ,
+      genuine `active` completion against the Mock provider), `worker.
+      whopConversionPoll.test.ts` (1, real BullMQ, honestly reports zero
+      conversions rather than fabricating any)
+
+### 4.5 API + UI
+- [x] `/api/creators/:id/relationship` (GET/PATCH), `/notes` (GET/POST),
+      `/tasks` (GET/POST) + `/tasks/:taskId` (PATCH), `/history` (GET,
+      real data), `/summaries` (GET/POST) + `/api/creators/summaries/
+      runs/:runId` (poll), `/affiliate` (GET/POST) + `/api/creators/
+      affiliates/:affiliateId` (poll the durable row, not a job id — a
+      real Whop call may not resolve instantly) + `.../conversions` (GET)
+- [x] New `/creators/:id` detail page: relationship status/next-action
+      editor, AI summary panel (trigger + poll), real outreach/reply
+      history table, notes, tasks, and the Whop affiliate panel (trigger +
+      poll + real conversion list) — linked from the `/creators` list
+
+### 4.6 Regression + commit
+- [x] Full suite: 43 files / 240 tests passing (212 prior + 28 new); `tsc
+      --noEmit` clean; `next build` clean with every new route present
+- [x] One self-caught bug fixed before committing: the Mock Whop
+      provider's `+mockfail`/`+mockunknown` convention initially checked
+      the whole `creatorIdentity` string instead of its local part before
+      the `@`, so a real-looking test email never matched — fixed to
+      match `mockOutreachProvider.ts`'s exact convention
+- [x] Commit + push this checkpoint
+
 ## External blockers (need the user)
 
 1. **Outreach send provider decision.** No provider selected in the repo.
@@ -187,8 +275,11 @@ branch restarts from current main rather than stacking on old history).
    transactional API like Resend/SendGrid/Postmark — each has a different
    auth/webhook model), plus the actual account/credentials, which I cannot
    create or authorize myself.
-2. **Whop API credentials** (Wave 4) — no account/API key configured;
-   `integration_credentials` is empty.
+2. **Whop API credentials.** No account/API key configured;
+   `integration_credentials` is empty. The full affiliate-creation +
+   conversion-polling pipeline (domain, worker, API, UI, tests) is now
+   built and genuinely testable against the Mock provider — only the real
+   `whop` credential and account authorization are missing.
 3. **Google Cloud project + OAuth consent + Pub/Sub topic** — only needed if
    Gmail is the chosen provider (see #1).
 
@@ -196,15 +287,15 @@ Everything else continues automatically without waiting on these.
 
 ## Exact next action
 
-Wave 3 is functionally complete (schema, Mock provider, real send
-execution with a genuinely tested interruption-safety property, reply
-ingestion/matching/classification/suggested-response, all wired into real
-UI, 38 test files / 212 tests passing, clean typecheck + build). Next:
-begin Wave 4 (Creator CRM + Whop) — CRM data model (relationship status,
-history, notes, tasks, next action, AI conversation summaries — reusing
-inbound_messages/outreach_sends as the history source rather than
-duplicating it), then the Whop affiliate/conversion adapter (human-
-triggered creation, polling-based conversion tracking) built the same way
-Wave 3's outreach provider was: a real, complete, testable implementation
-against a Mock/integration-test path, stopping only at the real Whop
-account/API-key boundary.
+Wave 4 is functionally complete (Creator CRM: relationship/notes/tasks/AI
+summaries, reusing Wave 3's outreach/reply tables as the history source
+rather than duplicating them; Whop: human-triggered affiliate creation +
+polling-based conversion tracking, built the same real/Mock-provider way
+as Wave 3's outreach send pipeline — 43 test files / 240 tests passing,
+clean typecheck + build). Next: begin Wave 5 (Analytics) — observed data
+vs. calculated metrics vs. estimates kept strictly separate (never
+presenting an estimate as observed), transparent formulas, explicit
+small-sample-size handling, campaign-level and workspace-level views
+covering product/discovery/qualification/matching/campaign/outreach/
+replies/CRM/Whop-conversion counts — all backed by real stored data, no
+invented historical data, no predictive ML.

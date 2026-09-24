@@ -18,6 +18,13 @@ import {
   outreachSendAttempts,
   inboundMessages,
   providerMailboxState,
+  creatorRelationships,
+  creatorNotes,
+  creatorTasks,
+  creatorConversationSummaries,
+  creatorAffiliates,
+  creatorAffiliateAttempts,
+  whopConversions,
 } from "@rdv/db";
 
 /**
@@ -48,3 +55,10 @@ export type OutreachSend = InferSelectModel<typeof outreachSends>;
 export type OutreachSendAttempt = InferSelectModel<typeof outreachSendAttempts>;
 export type InboundMessage = InferSelectModel<typeof inboundMessages>;
 export type ProviderMailboxState = InferSelectModel<typeof providerMailboxState>;
+export type CreatorRelationship = InferSelectModel<typeof creatorRelationships>;
+export type CreatorNote = InferSelectModel<typeof creatorNotes>;
+export type CreatorTask = InferSelectModel<typeof creatorTasks>;
+export type CreatorConversationSummary = InferSelectModel<typeof creatorConversationSummaries>;
+export type CreatorAffiliate = InferSelectModel<typeof creatorAffiliates>;
+export type CreatorAffiliateAttempt = InferSelectModel<typeof creatorAffiliateAttempts>;
+export type WhopConversion = InferSelectModel<typeof whopConversions>;

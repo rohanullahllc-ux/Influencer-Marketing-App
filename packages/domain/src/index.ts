@@ -17,3 +17,6 @@ export * from "./outreachProvider.js";
 export * from "./outreachSend.js";
 export * from "./replies.js";
 export * from "./providerMailboxState.js";
+export * from "./creatorCrm.js";
+export * from "./whopProvider.js";
+export * from "./creatorAffiliate.js";

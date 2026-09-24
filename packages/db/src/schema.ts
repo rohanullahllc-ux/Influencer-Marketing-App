@@ -736,3 +736,176 @@ export const providerMailboxState = pgTable(
     byWorkspaceProvider: index("provider_mailbox_state_workspace_provider_idx").on(t.workspaceId, t.provider),
   })
 );
+
+// --- Wave 4: Creator CRM ---------------------------------------------------
+// A relationship layer over an existing creator. Deliberately does not
+// duplicate outreach/reply history (that's outreachSends/inboundMessages,
+// read live) — only genuinely new state: lifecycle status, notes, tasks,
+// and AI conversation summaries, per docs/PRODUCT_VISION.md.
+
+export const creatorRelationshipStatusEnum = pgEnum("creator_relationship_status", [
+  "new",
+  "contacted",
+  "in_conversation",
+  "negotiating",
+  "partnered",
+  "declined",
+  "unresponsive",
+  "do_not_contact",
+]);
+
+export const creatorRelationships = pgTable(
+  "creator_relationships",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    creatorId: uuid("creator_id").notNull().references(() => creators.id, { onDelete: "cascade" }),
+    status: creatorRelationshipStatusEnum("status").notNull().default("new"),
+    nextAction: text("next_action"),
+    nextActionDueAt: timestamp("next_action_due_at", { withTimezone: true }),
+    updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byWorkspace: index("creator_relationships_workspace_idx").on(t.workspaceId),
+  })
+);
+
+export const creatorNotes = pgTable(
+  "creator_notes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    creatorId: uuid("creator_id").notNull().references(() => creators.id, { onDelete: "cascade" }),
+    authorUserId: uuid("author_user_id").references(() => users.id, { onDelete: "set null" }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byWorkspace: index("creator_notes_workspace_idx").on(t.workspaceId),
+    byCreator: index("creator_notes_creator_idx").on(t.workspaceId, t.creatorId),
+  })
+);
+
+export const creatorTaskStatusEnum = pgEnum("creator_task_status", ["open", "done", "cancelled"]);
+
+export const creatorTasks = pgTable(
+  "creator_tasks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    creatorId: uuid("creator_id").notNull().references(() => creators.id, { onDelete: "cascade" }),
+    campaignId: uuid("campaign_id").references(() => campaigns.id, { onDelete: "set null" }),
+    title: text("title").notNull(),
+    status: creatorTaskStatusEnum("status").notNull().default("open"),
+    dueAt: timestamp("due_at", { withTimezone: true }),
+    assignedTo: uuid("assigned_to").references(() => users.id, { onDelete: "set null" }),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byWorkspace: index("creator_tasks_workspace_idx").on(t.workspaceId),
+    byCreator: index("creator_tasks_creator_idx").on(t.workspaceId, t.creatorId),
+  })
+);
+
+export const creatorConversationSummaries = pgTable(
+  "creator_conversation_summaries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    creatorId: uuid("creator_id").notNull().references(() => creators.id, { onDelete: "cascade" }),
+    campaignId: uuid("campaign_id").references(() => campaigns.id, { onDelete: "set null" }),
+    summary: text("summary").notNull(),
+    keyPoints: jsonb("key_points").$type<string[]>(),
+    basedOnMessageCount: integer("based_on_message_count").notNull().default(0),
+    provenance: provenanceEnum("provenance").notNull().default("ai_derived"),
+    generatedBy: uuid("generated_by").references(() => users.id, { onDelete: "set null" }),
+    generatedAt: timestamp("generated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byWorkspace: index("creator_conversation_summaries_workspace_idx").on(t.workspaceId),
+    byCreator: index("creator_conversation_summaries_creator_idx").on(t.workspaceId, t.creatorId),
+  })
+);
+
+// --- Wave 4: Whop affiliate/conversion -------------------------------------
+// Mirrors the outreachProvider.ts registry pattern deliberately: one
+// centralized provider abstraction, a single active implementation
+// (Mock, until real Whop credentials exist), never a generic multi-vendor
+// plugin system.
+
+export const affiliateStatusEnum = pgEnum("affiliate_status", ["pending", "creating", "active", "failed", "unknown", "revoked"]);
+
+export const creatorAffiliates = pgTable(
+  "creator_affiliates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    creatorId: uuid("creator_id").notNull().references(() => creators.id, { onDelete: "cascade" }),
+    campaignId: uuid("campaign_id").references(() => campaigns.id, { onDelete: "set null" }),
+    provider: text("provider").notNull(),
+    // Workspace-scoped idempotency key computed by the domain layer, same
+    // pattern as outreachSends.idempotencyKey — unique index in the
+    // migration is the actual enforcement.
+    idempotencyKey: text("idempotency_key").notNull(),
+    providerAffiliateId: text("provider_affiliate_id"),
+    affiliateCode: text("affiliate_code"),
+    status: affiliateStatusEnum("status").notNull().default("pending"),
+    statusReason: text("status_reason"),
+    commercialMetadata: jsonb("commercial_metadata"),
+    requestedBy: uuid("requested_by").notNull().references(() => users.id, { onDelete: "restrict" }),
+    requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byWorkspace: index("creator_affiliates_workspace_idx").on(t.workspaceId),
+    byCreator: index("creator_affiliates_creator_idx").on(t.workspaceId, t.creatorId),
+  })
+);
+
+export const creatorAffiliateAttempts = pgTable(
+  "creator_affiliate_attempts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    creatorAffiliateId: uuid("creator_affiliate_id").notNull().references(() => creatorAffiliates.id, { onDelete: "cascade" }),
+    attemptNumber: integer("attempt_number").notNull(),
+    attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull().defaultNow(),
+    result: affiliateStatusEnum("result").notNull(),
+    providerAffiliateId: text("provider_affiliate_id"),
+    errorMessage: text("error_message"),
+    rawProviderResponse: jsonb("raw_provider_response"),
+  },
+  (t) => ({
+    byWorkspace: index("creator_affiliate_attempts_workspace_idx").on(t.workspaceId),
+    byAffiliate: index("creator_affiliate_attempts_affiliate_idx").on(t.creatorAffiliateId),
+  })
+);
+
+export const whopConversionEventTypeEnum = pgEnum("whop_conversion_event_type", ["click", "order", "conversion"]);
+
+export const whopConversions = pgTable(
+  "whop_conversions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    creatorAffiliateId: uuid("creator_affiliate_id").notNull().references(() => creatorAffiliates.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    providerEventId: text("provider_event_id").notNull(),
+    eventType: whopConversionEventTypeEnum("event_type").notNull(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    amount: numeric("amount"),
+    currency: text("currency"),
+    rawPayload: jsonb("raw_payload"),
+    provenance: provenanceEnum("provenance").notNull().default("verified_external"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byWorkspace: index("whop_conversions_workspace_idx").on(t.workspaceId),
+    byAffiliate: index("whop_conversions_affiliate_idx").on(t.workspaceId, t.creatorAffiliateId),
+  })
+);

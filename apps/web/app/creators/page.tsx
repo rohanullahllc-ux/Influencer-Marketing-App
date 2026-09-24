@@ -44,7 +44,9 @@ export default async function CreatorsPage() {
           <tbody>
             {creators.map((c) => (
               <tr key={c.id} style={{ borderBottom: "1px solid #eee" }}>
-                <td>{c.channelUrl ? <a href={c.channelUrl}>{c.displayName ?? c.channelUrl}</a> : (c.displayName ?? "—")}</td>
+                <td>
+                  <a href={`/creators/${c.id}`}>{c.displayName ?? c.channelUrl ?? c.id}</a>
+                </td>
                 <td>{c.platform}</td>
                 <td>{c.provenance}</td>
                 <td>{c.subscriberCount ?? "—"}</td>
