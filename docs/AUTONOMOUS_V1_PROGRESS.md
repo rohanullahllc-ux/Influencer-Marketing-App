@@ -45,8 +45,14 @@ own docs + code are authoritative, per the mission.
   flagged Operations TODO (real failed-job visibility + retry), and
   closed two untested admin-only approval-boundary gaps. See "Wave 6 —
   detailed checklist" below.
-- Wave 7 (End-to-End V1 Validation): not started
-- Wave 7 (E2E Validation): not started
+- Wave 7 (Complete End-to-End V1 Validation): **done**. 51 files / 269
+  tests, clean typecheck, clean build. Full real 16-step chain proven in
+  one continuous test, plus closed negative-path tests. See "Wave 7 —
+  detailed checklist" below.
+
+**V1 build (Step 6, all seven waves) is complete.** Branch is in a
+merge-ready state pending explicit approval — see "Final V1 status" at
+the end of this document.
 
 ## Branch
 
@@ -473,6 +479,66 @@ comments.
       present
 - [x] Commit + push this checkpoint
 
+## Wave 7 — Complete End-to-End V1 Validation (detailed checklist) — DONE
+
+### 7.1 Full real-chain E2E test
+- [x] `tests/e2e.v1.test.ts`: one continuous test through the entire real
+      16-step chain — Product → Product Intelligence (human-approved) →
+      Creator (Discovery) → Campaign → Creator Selection → Deterministic
+      Qualification → AI Matching → Outreach Draft → content-pinned human
+      Approval → Safety Gate → real Send Execution (Mock provider, real
+      `sent` outcome with a real provider message id) → Reply Ingestion
+      (real, matched to the real prior send) → Reply Intelligence → real
+      Creator CRM (relationship/notes/tasks/history) → human-triggered
+      Whop Affiliate workflow (Mock provider, real `active` outcome) →
+      Conversion (real ingestion) → both workspace-wide and per-campaign
+      Analytics, asserted against exactly what was created
+- [x] Continues (does not duplicate) `tests/e2e.wave2.test.ts`'s existing
+      Product→DryRun coverage (RBAC boundaries, content-pinning,
+      provenance); uses the exact same "persist the already-produced
+      external result" seam Wave 2's own E2E test established for the two
+      steps needing a real external AI call (matching, reply
+      classification) — every other step calls the real, unmodified
+      `@rdv/domain` function the actual API routes/workers call
+
+### 7.2 Negative / failure paths
+- [x] Confirmed already covered by dedicated per-feature tests (not
+      re-tested here to avoid duplication): AI failure without a key
+      (all 6 AI operations, one worker test each), provider `failed`/
+      `unknown` outcomes (outreach send + Whop affiliate), interrupted
+      send/affiliate creation, duplicate send (idempotency), duplicate
+      reply (webhook dedupe), suppression, do-not-contact (Wave 6),
+      kill switch, RBAC/invalid permission, cross-workspace RLS,
+      reconciliation polling
+- [x] `tests/e2e.negativePaths.test.ts` (4 new tests) closes the gaps that
+      specifically require chaining two already-tested features together,
+      which no single feature's own test exercises:
+  - a stale (edit-invalidated) approval is rejected by the real
+    `scheduleSend` entry point, not just marked invalidated in isolation
+  - an unauthorized affiliate-creation attempt never creates any
+    `creator_affiliates` row at all — the rejection is total, not a
+    partial/rolled-back side effect
+  - a real `failed` send outcome is distinct from `unknown`, and
+    re-executing a terminal `failed` send is a safe no-op (never
+    silently retried into a duplicate `sent`)
+  - a job retried after failing again is not silently lost — it remains
+    a real, visible failed job with its real (second) failure reason
+
+### 7.3 Full regression + typecheck + build
+- [x] 51 test files / 269 tests passing (264 prior + 5 new); `tsc
+      --noEmit` clean; `next build` clean with every route present
+
+### 7.4 Final branch audit
+- [x] `main` confirmed untouched at `94ccf53`; this branch's merge-base
+      with `main` is exactly `94ccf53` — a clean linear stack of 8
+      commits on top, no drift, no stray merges
+- [x] Confirmed zero references to the temporary Skill
+      (`digitalventures-influencer-ops`, `claude-skill`) anywhere in this
+      repository's tracked source (`git grep`, whole tree) outside this
+      progress file's own documentation of the separation
+- [x] Working tree clean, branch pushed, exact final commit identified
+      (see top of this document / git log)
+
 ## External blockers (need the user)
 
 1. **Outreach send provider decision.** No provider selected in the repo.
@@ -490,27 +556,19 @@ comments.
 3. **Google Cloud project + OAuth consent + Pub/Sub topic** — only needed if
    Gmail is the chosen provider (see #1).
 
-Everything else continues automatically without waiting on these.
+Nothing else in V1 is blocked. Both integrations are fully built,
+end-to-end tested, and merge-ready against their Mock providers; only the
+real credential/account boundary remains, exactly as the mission required.
 
-## Exact next action
+## Final V1 status
 
-Wave 6 is functionally complete (tenancy/RLS/RBAC/AI-safety audited and
-confirmed solid with new regression-proof tests; one real safety gap found
-and fixed — creator do-not-contact wasn't enforced by the send gate; the
-Wave-1-flagged Operations TODO closed with real failed-job visibility +
-retry, now properly authenticated; a real, tested, provider-independent
-webhook signature-verification primitive built — 49 test files / 264 tests
-passing, clean typecheck + build). Next: begin Wave 7 (Complete End-to-End
-V1 Validation) — exercise the full real chain (Product → Product
-Intelligence → human approval → Creator Discovery → Qualification →
-Matching → Campaign → Outreach Draft → human Approval → Safety Gate → Send
-Execution → Reply Ingestion → Reply Intelligence → Creator CRM →
-human-triggered Affiliate workflow → Conversion → Analytics) through the
-real production domain services in one continuous test, plus the full
-negative-path list from the mission (AI failure, provider failure,
-interrupted/unknown/duplicate send, duplicate reply, stale approval,
-suppressed/do-not-contact creator, kill switch, invalid permission,
-cross-workspace access, failed retry, reconciliation) — then a final full-
-branch audit (regression, typecheck, build, and a summary confirming the
-temporary Skill remains completely separate) before reporting a
-merge-ready state and stopping for explicit approval.
+**All seven waves (Foundation through Complete End-to-End V1 Validation)
+are done.** 51 test files / 269 tests passing, `tsc --noEmit` clean,
+`next build` clean, full real E2E chain proven, negative paths proven,
+RLS/RBAC/AI-safety audited with regression-proof tests, temporary Skill
+confirmed completely separate (never merged, never referenced, never a
+SaaS dependency). Branch `claude/rdv-project-context-3ckcrw` is a clean
+8-commit stack directly on top of `main`@`94ccf53` with no drift.
+
+**Not merged into `main` — awaiting explicit approval, per the mission's
+explicit instruction to stop before merging.**
