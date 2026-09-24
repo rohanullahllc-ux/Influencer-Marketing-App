@@ -38,7 +38,22 @@
         "No public Whop webhook endpoint built -- polling is the real primary path in V1, not a backstop; same reasoning as Wave 3's deferred reply webhook."
       ]
     },
-    "5_analytics": { "status": "not_started" },
+    "5_analytics": {
+      "status": "done",
+      "tests": "44 files / 243 tests (3 new)",
+      "phases": {
+        "5.1_domain_queries": "done",
+        "5.2_api_and_ui": "done",
+        "5.3_regression_and_commit": "done"
+      },
+      "notes": [
+        "getWorkspaceAnalytics + getCampaignAnalytics compute every number live from stored rows at read time -- no caching, no pre-computation.",
+        "Derived rates (e.g. average match score) always returned with their sampleSize; UI flags samples under 5.",
+        "Qualification failure reasons reused from the real measuredValues.reasons already persisted by Wave 2's qualifyCampaignCreators, not recomputed.",
+        "Whop conversion revenue summed per currency (array), never mixed into one misleading total.",
+        "No predictive ML or forecasting anywhere in this module."
+      ]
+    },
     "6_hardening": { "status": "not_started" },
     "7_e2e_validation": { "status": "not_started" }
   },
@@ -56,5 +71,5 @@
       "workaroundInPlace": "Full pipeline built and tested (domain, worker, API, UI) against a Mock provider -- resolveWhopProviderName() is the single function that changes once real credentials exist"
     }
   ],
-  "nextAction": "Begin Wave 5 (Analytics): domain queries/services for observed counts across product/discovery/qualification/matching/campaign/outreach/replies/CRM/Whop-conversion -- backed by real stored data only, observed vs. calculated vs. estimated kept strictly distinct, explicit small-sample-size handling, campaign-level and workspace-level views, API routes + UI, tests. No predictive ML or forecasting."
+  "nextAction": "Begin Wave 6 (Safety/Operations/Reliability Hardening): audit the full V1 implementation against PRODUCT_VISION.md's security & safety rules (tenancy/RLS, RBAC, AI boundaries, outreach safety gate, reply handling, job retries/interruption safety, campaign pause/kill-switch, auditability); real webhook signature verification + replay protection (deferred from Wave 3, paired with the eventual provider decision) and a queue dead-letter/stuck-job review across all lanes are the two known focus areas. Fix real issues found; never weaken a safety rule or test to pass it."
 }

@@ -6,6 +6,7 @@ import {
   listTemplates,
   listCurrentQualifications,
   listCurrentMatches,
+  getCampaignAnalytics,
 } from "@rdv/domain";
 import { AuthorizationError } from "@rdv/lib";
 import { requireSession } from "../../../lib/session";
@@ -35,13 +36,14 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   }
 
   const campaign = await getCampaign({ workspaceId: actor.workspaceId, actorUserId: actor.userId, campaignId: params.id });
-  const [shortlisted, allCreators, assignments, allTemplates, qualifications, matches] = await Promise.all([
+  const [shortlisted, allCreators, assignments, allTemplates, qualifications, matches, analytics] = await Promise.all([
     listCampaignCreators({ workspaceId: actor.workspaceId, actorUserId: actor.userId, campaignId: params.id }),
     listCreators({ workspaceId: actor.workspaceId, actorUserId: actor.userId }),
     listCampaignTemplates({ workspaceId: actor.workspaceId, actorUserId: actor.userId, campaignId: params.id }),
     listTemplates({ workspaceId: actor.workspaceId, actorUserId: actor.userId }),
     listCurrentQualifications({ workspaceId: actor.workspaceId, actorUserId: actor.userId, campaignId: params.id }),
     listCurrentMatches({ workspaceId: actor.workspaceId, actorUserId: actor.userId, campaignId: params.id }),
+    getCampaignAnalytics({ workspaceId: actor.workspaceId, actorUserId: actor.userId, campaignId: params.id }),
   ]);
   const shortlistedCreators = allCreators.filter((c) => shortlisted.some((s) => s.creatorId === c.id));
 
@@ -92,6 +94,15 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
           </tr>
         </tbody>
       </table>
+
+      <h2>Analytics</h2>
+      <p style={{ fontSize: 13, marginBottom: 24 }}>
+        {analytics.shortlist.total} shortlisted · {analytics.qualification.passed}/{analytics.qualification.totalCurrentlyEvaluated} qualified
+        · {analytics.matching.totalCurrentlyMatched} matched
+        {analytics.matching.averageScore !== null ? ` (avg score ${analytics.matching.averageScore.toFixed(2)})` : ""} ·{" "}
+        {analytics.outreach.totalDrafts} drafts · {analytics.sends.total} sends · {analytics.replies.total} replies. See{" "}
+        <a href="/analytics">/analytics</a> for the full workspace rollup.
+      </p>
 
       <h2>Creator shortlist</h2>
       <ShortlistPanel campaignId={campaign.id} allCreators={allCreators} shortlisted={shortlisted} />

@@ -37,7 +37,8 @@ own docs + code are authoritative, per the mission.
   tests, clean typecheck, clean build.
 - Wave 4 (Creator CRM + Whop): **done**. 43 files / 240 tests, clean
   typecheck, clean build. See "Wave 4 — detailed checklist" below.
-- Wave 5 (Analytics): not started
+- Wave 5 (Analytics): **done**. 44 files / 243 tests, clean typecheck,
+  clean build. See "Wave 5 — detailed checklist" below.
 - Wave 6 (Hardening): not started
 - Wave 7 (E2E Validation): not started
 
@@ -268,6 +269,52 @@ branch restarts from current main rather than stacking on old history).
       match `mockOutreachProvider.ts`'s exact convention
 - [x] Commit + push this checkpoint
 
+## Wave 5 — Analytics (detailed checklist) — DONE
+
+- [x] `packages/domain/src/analytics.ts`: `getWorkspaceAnalytics` (a
+      workspace-wide rollup — product, discovery, qualification, matching,
+      campaigns, outreach, sends, replies, CRM, Whop affiliate/conversion)
+      and `getCampaignAnalytics` (the same principle, scoped to one
+      campaign). Every number is a real count read live from stored rows
+      inside the request — no caching, no pre-computation, no estimation
+- [x] Observed vs. calculated kept explicit: a derived rate (e.g. average
+      match score) is always returned alongside its `sampleSize`/`n`, and
+      the UI visibly flags a small sample (< 5) rather than presenting it
+      with the same confidence as a larger one
+- [x] Qualification failure reasons are read from the real per-evaluation
+      `measuredValues.reasons` array already persisted by Wave 2's
+      `qualifyCampaignCreators` (reused, not recomputed) and tallied into
+      a top-10 list
+- [x] `creator_qualifications`/`creator_matches` "current" state computed
+      with a small `latestPerGroup` helper (max `evaluatedAt`/`computedAt`
+      per campaign+creator) — the same append-only-log "latest" pattern
+      used everywhere else in this codebase, written once and reused for
+      both tables
+- [x] Whop conversion revenue is summed **per currency**, never mixed
+      across currencies into one misleading total (`revenueByCurrency`,
+      an array, not a single number) — only real `order`/`conversion`
+      events with a real `amount` are counted, never fabricated
+- [x] No predictive ML, no forecasting, nothing speculative anywhere in
+      this module
+- [x] API: `GET /api/analytics` (workspace-wide), `GET /api/campaigns/:id/
+      analytics` (per-campaign)
+- [x] UI: new `/analytics` workspace dashboard (every section observed-
+      data-only, generation timestamp shown); a compact analytics summary
+      line added to the existing campaign detail page, linking to the full
+      dashboard
+- [x] Tests (3 new, `domain.analytics.test.ts`): a full real fixture
+      exercising the entire chain (product → approved intelligence →
+      discovery → qualification pass+fail → matching → campaign →
+      outreach draft → approval → real send → real reply → CRM
+      relationship/note/task → real Whop affiliate → real conversion) and
+      asserting every rollup number against what was actually created,
+      plus an empty-workspace honesty check (zeroes, not fabricated
+      placeholders) and an RBAC check
+- [x] Verification: full suite 44 files / 243 tests passing (212+28
+      Wave 4, +3 Wave 5); `tsc --noEmit` clean; `next build` clean with
+      `/analytics` and both new API routes present
+- [x] Commit + push this checkpoint
+
 ## External blockers (need the user)
 
 1. **Outreach send provider decision.** No provider selected in the repo.
@@ -287,15 +334,17 @@ Everything else continues automatically without waiting on these.
 
 ## Exact next action
 
-Wave 4 is functionally complete (Creator CRM: relationship/notes/tasks/AI
-summaries, reusing Wave 3's outreach/reply tables as the history source
-rather than duplicating them; Whop: human-triggered affiliate creation +
-polling-based conversion tracking, built the same real/Mock-provider way
-as Wave 3's outreach send pipeline — 43 test files / 240 tests passing,
-clean typecheck + build). Next: begin Wave 5 (Analytics) — observed data
-vs. calculated metrics vs. estimates kept strictly separate (never
-presenting an estimate as observed), transparent formulas, explicit
-small-sample-size handling, campaign-level and workspace-level views
-covering product/discovery/qualification/matching/campaign/outreach/
-replies/CRM/Whop-conversion counts — all backed by real stored data, no
-invented historical data, no predictive ML.
+Wave 5 is functionally complete (workspace-wide and per-campaign analytics
+rollups across every build area, all backed by real stored data, observed
+counts kept strictly distinct from derived rates with sample sizes shown —
+44 test files / 243 tests passing, clean typecheck + build). Next: begin
+Wave 6 (Safety/Operations/Reliability Hardening) — audit the entire V1
+implementation against docs/PRODUCT_VISION.md's "security & safety rules
+that must never be weakened" (tenancy/RLS, authorization/RBAC, AI
+boundaries, outreach safety gate, replies, jobs/retries/interruption
+safety, campaign pause/kill-switch, auditability), with particular focus
+on the two things explicitly deferred here: real webhook signature
+verification + replay protection (paired with whichever provider decision
+eventually lands) and a general pass over queue/job dead-letter and stuck-
+job handling across all lanes. Fix any real issue found; never weaken a
+safety rule or test to make it pass.
