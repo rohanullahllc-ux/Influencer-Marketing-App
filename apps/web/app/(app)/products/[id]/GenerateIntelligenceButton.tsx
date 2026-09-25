@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "../../../../components/ui/Button";
+import { Alert } from "../../../../components/ui/Alert";
 
-/** Wave 2 Phase 2 (plan §7): triggers async AI generation of a new draft (POST /api/products/:id/intelligence). Generation runs on the ai-ops queue lane — this only enqueues it, it does not wait for completion. */
 export function GenerateIntelligenceButton({ productId }: { productId: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -27,26 +28,32 @@ export function GenerateIntelligenceButton({ productId }: { productId: string })
   }
 
   return (
-    <div style={{ marginBottom: 16 }}>
-      <button onClick={handleClick} disabled={submitting} style={{ padding: "8px 16px" }}>
-        {submitting ? "Queuing…" : "Generate AI Intelligence"}
-      </button>
-      {queued && (
-        <span style={{ marginLeft: 12, fontSize: 13, color: "#666" }}>
-          Queued — this runs in the background.{" "}
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              router.refresh();
-            }}
-          >
-            Refresh
-          </a>{" "}
-          in a few seconds to see the draft.
-        </span>
+    <div>
+      <div className="flex items-center gap-3">
+        <Button variant="primary" onClick={handleClick} disabled={submitting}>
+          {submitting ? "Queuing…" : "Generate AI Intelligence"}
+        </Button>
+        {queued && (
+          <span className="text-supporting text-ink-subtle">
+            Queued — this runs in the background.{" "}
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                router.refresh();
+              }}
+            >
+              Refresh
+            </a>{" "}
+            in a few seconds to see the draft.
+          </span>
+        )}
+      </div>
+      {error && (
+        <div className="mt-3">
+          <Alert tone="danger">{error}</Alert>
+        </div>
       )}
-      {error && <p style={{ color: "crimson", fontSize: 13 }}>{error}</p>}
     </div>
   );
 }

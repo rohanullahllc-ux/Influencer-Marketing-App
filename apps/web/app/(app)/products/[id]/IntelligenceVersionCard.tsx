@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ProductIntelligence } from "@rdv/domain";
+import { Card } from "../../../../components/ui/Card";
+import { StatusBadge, toneForStatus } from "../../../../components/ui/StatusBadge";
+import { Button } from "../../../../components/ui/Button";
+import { Alert } from "../../../../components/ui/Alert";
+import { FormField, TextInput, TextArea } from "../../../../components/ui/Form";
 
-// Reuses the actual @rdv/domain entity type rather than a hand-duplicated
-// interface, so this component can never silently drift from the real
-// product_intelligence row shape.
 type Version = ProductIntelligence;
 
 const ARRAY_FIELDS: { key: keyof Version; label: string }[] = [
@@ -22,19 +24,6 @@ const ARRAY_FIELDS: { key: keyof Version; label: string }[] = [
   { key: "keywords", label: "Keywords" },
 ];
 
-const STATUS_COLOR: Record<Version["status"], string> = {
-  draft: "#b8860b",
-  approved: "green",
-  superseded: "#999",
-};
-
-/**
- * Wave 2 Phase 2 (plan §7, §14.2): one Product Intelligence version —
- * read-only display, plus (for a draft, when the caller has the role)
- * inline edit and an explicit Approve action. Editing never touches
- * origin/status/approved_* — only the content fields + edited_by/
- * edited_at change, exactly as the API enforces server-side.
- */
 export function IntelligenceVersionCard({
   version,
   productId,
@@ -109,12 +98,11 @@ export function IntelligenceVersionCard({
   }
 
   return (
-    <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 16, marginBottom: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <span style={{ fontWeight: 600, color: STATUS_COLOR[version.status] }}>{version.status.toUpperCase()}</span>
-        <span style={{ fontSize: 12, color: "#666" }}>origin: {version.origin}</span>
-      </div>
-      <p style={{ fontSize: 12, color: "#666", margin: "4px 0" }}>
+    <Card
+      title={<StatusBadge label={version.status} tone={toneForStatus(version.status)} />}
+      actions={<span className="text-meta text-ink-faint">origin: {version.origin}</span>}
+    >
+      <p className="mb-3 text-meta text-ink-faint">
         Generated {new Date(version.generatedAt).toLocaleString()}
         {version.editedAt && ` · edited ${new Date(version.editedAt).toLocaleString()}`}
         {version.approvedAt && ` · approved ${new Date(version.approvedAt).toLocaleString()}`}
@@ -123,76 +111,90 @@ export function IntelligenceVersionCard({
       {editing ? (
         <form onSubmit={handleSave}>
           {ARRAY_FIELDS.map(({ key, label }) => (
-            <div key={key} style={{ marginBottom: 8 }}>
-              <label style={{ display: "block", fontSize: 13, marginBottom: 2 }}>{label} (comma-separated)</label>
-              <input
+            <FormField key={key} label={`${label} (comma-separated)`} htmlFor={key}>
+              <TextInput
+                id={key}
                 type="text"
                 value={fields[key]}
                 onChange={(e) => setFields((f) => ({ ...f, [key]: e.target.value }))}
-                style={{ width: "100%", padding: 6 }}
               />
-            </div>
+            </FormField>
           ))}
-          <div style={{ marginBottom: 8 }}>
-            <label style={{ display: "block", fontSize: 13, marginBottom: 2 }}>Audience rationale</label>
-            <textarea
+          <FormField label="Audience rationale" htmlFor="audienceRationale">
+            <TextArea
+              id="audienceRationale"
               value={audienceRationale}
               onChange={(e) => setAudienceRationale(e.target.value)}
               rows={3}
-              style={{ width: "100%", padding: 6 }}
             />
-          </div>
-          <div style={{ marginBottom: 8 }}>
-            <label style={{ display: "block", fontSize: 13, marginBottom: 2 }}>Confidence (0-1)</label>
-            <input
+          </FormField>
+          <FormField label="Confidence (0-1)" htmlFor="confidence">
+            <TextInput
+              id="confidence"
               type="text"
+              className="w-32"
               value={confidence}
               onChange={(e) => setConfidence(e.target.value)}
-              style={{ width: 120, padding: 6 }}
             />
+          </FormField>
+          {error && (
+            <div className="mb-3">
+              <Alert tone="danger">{error}</Alert>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Button type="submit" variant="primary" disabled={submitting}>
+              {submitting ? "Saving…" : "Save"}
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
+              Cancel
+            </Button>
           </div>
-          {error && <p style={{ color: "crimson" }}>{error}</p>}
-          <button type="submit" disabled={submitting} style={{ padding: "6px 14px", marginRight: 8 }}>
-            {submitting ? "Saving…" : "Save"}
-          </button>
-          <button type="button" onClick={() => setEditing(false)} style={{ padding: "6px 14px" }}>
-            Cancel
-          </button>
         </form>
       ) : (
         <>
-          {ARRAY_FIELDS.map(({ key, label }) => {
-            const value = (version[key] as string[] | null) ?? [];
-            if (value.length === 0) return null;
-            return (
-              <p key={key} style={{ fontSize: 13, margin: "4px 0" }}>
-                <strong>{label}:</strong> {value.join(", ")}
+          <div className="flex flex-col gap-1.5">
+            {ARRAY_FIELDS.map(({ key, label }) => {
+              const value = (version[key] as string[] | null) ?? [];
+              if (value.length === 0) return null;
+              return (
+                <p key={key} className="text-supporting text-ink">
+                  <strong className="text-ink">{label}:</strong> {value.join(", ")}
+                </p>
+              );
+            })}
+            {version.audienceRationale && (
+              <p className="text-supporting text-ink">
+                <strong className="text-ink">Rationale:</strong> {version.audienceRationale}
               </p>
-            );
-          })}
-          {version.audienceRationale && (
-            <p style={{ fontSize: 13, margin: "4px 0" }}>
-              <strong>Rationale:</strong> {version.audienceRationale}
-            </p>
+            )}
+            {version.confidence && (
+              <p className="text-supporting text-ink">
+                <strong className="text-ink">Confidence:</strong> {version.confidence}
+              </p>
+            )}
+          </div>
+          {error && (
+            <div className="mt-3">
+              <Alert tone="danger">{error}</Alert>
+            </div>
           )}
-          {version.confidence && (
-            <p style={{ fontSize: 13, margin: "4px 0" }}>
-              <strong>Confidence:</strong> {version.confidence}
-            </p>
-          )}
-          {error && <p style={{ color: "crimson" }}>{error}</p>}
-          {isDraft && canEdit && (
-            <button onClick={() => setEditing(true)} style={{ padding: "6px 14px", marginRight: 8, marginTop: 8 }}>
-              Edit
-            </button>
-          )}
-          {isDraft && canApprove && (
-            <button onClick={handleApprove} disabled={submitting} style={{ padding: "6px 14px", marginTop: 8 }}>
-              {submitting ? "Approving…" : "Approve"}
-            </button>
+          {(isDraft && (canEdit || canApprove)) && (
+            <div className="mt-4 flex gap-2">
+              {isDraft && canEdit && (
+                <Button variant="secondary" onClick={() => setEditing(true)}>
+                  Edit
+                </Button>
+              )}
+              {isDraft && canApprove && (
+                <Button variant="primary" onClick={handleApprove} disabled={submitting}>
+                  {submitting ? "Approving…" : "Approve"}
+                </Button>
+              )}
+            </div>
           )}
         </>
       )}
-    </div>
+    </Card>
   );
 }

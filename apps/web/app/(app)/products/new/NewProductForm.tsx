@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { FormSection, FormField, TextInput, TextArea } from "../../../../components/ui/Form";
+import { Button } from "../../../../components/ui/Button";
+import { Alert } from "../../../../components/ui/Alert";
 
-/** Wave 2 Phase 2 (plan §7): creates a product via POST /api/products, then redirects to its detail page. */
 export function NewProductForm() {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -34,36 +36,25 @@ export function NewProductForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 480 }}>
-      <div style={{ marginBottom: 12 }}>
-        <label htmlFor="name" style={{ display: "block", marginBottom: 4 }}>
-          Name
-        </label>
-        <input
-          id="name"
-          type="text"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          style={{ width: "100%", padding: 8 }}
-        />
-      </div>
-      <div style={{ marginBottom: 12 }}>
-        <label htmlFor="description" style={{ display: "block", marginBottom: 4 }}>
-          Description
-        </label>
-        <textarea
-          id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={4}
-          style={{ width: "100%", padding: 8 }}
-        />
-      </div>
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
-      <button type="submit" disabled={submitting} style={{ padding: "8px 16px" }}>
+    <form onSubmit={handleSubmit}>
+      <FormSection title="Product details" description="What are you promoting? This feeds AI Product Intelligence and creator discovery.">
+        <FormField label="Name" htmlFor="name" required>
+          <TextInput id="name" type="text" required value={name} onChange={(e) => setName(e.target.value)} />
+        </FormField>
+        <FormField label="Description" htmlFor="description" hint="Optional, but helps the AI generate more accurate intelligence.">
+          <TextArea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} />
+        </FormField>
+      </FormSection>
+
+      {error && (
+        <div className="mb-4">
+          <Alert tone="danger">{error}</Alert>
+        </div>
+      )}
+
+      <Button type="submit" variant="primary" disabled={submitting}>
         {submitting ? "Creating…" : "Create product"}
-      </button>
+      </Button>
     </form>
   );
 }

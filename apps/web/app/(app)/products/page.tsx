@@ -1,8 +1,12 @@
 import { listProducts } from "@rdv/domain";
 import { AuthorizationError } from "@rdv/lib";
 import { requireSession } from "../../../lib/session";
+import { PageHeader } from "../../../components/ui/PageHeader";
+import { ButtonLink } from "../../../components/ui/Button";
+import { EmptyState } from "../../../components/ui/EmptyState";
+import { StatusBadge, toneForStatus } from "../../../components/ui/StatusBadge";
+import { Table, Thead, Th, Tr, Td } from "../../../components/ui/Table";
 
-/** Wave 2 Phase 2 (plan §7): product list, the entry point into the Product + Intelligence flow. */
 export default async function ProductsPage() {
   let actor;
   try {
@@ -10,11 +14,11 @@ export default async function ProductsPage() {
   } catch (err) {
     if (err instanceof AuthorizationError) {
       return (
-        <main style={{ padding: 32 }}>
-          <p>
-            You must <a href="/login">sign in</a> to view this page.
-          </p>
-        </main>
+        <EmptyState
+          title="Sign in required"
+          description="You must sign in to view products."
+          action={<ButtonLink href="/login" variant="primary">Sign in</ButtonLink>}
+        />
       );
     }
     throw err;
@@ -23,35 +27,43 @@ export default async function ProductsPage() {
   const products = await listProducts({ workspaceId: actor.workspaceId, actorUserId: actor.userId });
 
   return (
-    <main style={{ padding: 32, maxWidth: 720 }}>
-      <h1>Products</h1>
-      <p style={{ marginBottom: 16 }}>
-        <a href="/products/new">+ New product</a>
-      </p>
+    <div>
+      <PageHeader
+        title="Products"
+        description="Products drive AI intelligence, creator discovery, and campaigns."
+        actions={<ButtonLink href="/products/new" variant="primary">+ New product</ButtonLink>}
+      />
+
       {products.length === 0 ? (
-        <p style={{ color: "#666" }}>No products yet.</p>
+        <EmptyState
+          title="No products yet"
+          description="Create your first product to start generating AI intelligence and discovering creators."
+          action={<ButtonLink href="/products/new" variant="primary">+ New product</ButtonLink>}
+        />
       ) : (
-        <table cellPadding={8} style={{ borderCollapse: "collapse", width: "100%" }}>
-          <thead>
-            <tr style={{ textAlign: "left", borderBottom: "2px solid #ddd" }}>
-              <th>Name</th>
-              <th>Status</th>
-              <th>Created</th>
-            </tr>
-          </thead>
+        <Table>
+          <Thead>
+            <Th>Name</Th>
+            <Th>Status</Th>
+            <Th>Created</Th>
+          </Thead>
           <tbody>
             {products.map((p) => (
-              <tr key={p.id} style={{ borderBottom: "1px solid #eee" }}>
-                <td>
-                  <a href={`/products/${p.id}`}>{p.name}</a>
-                </td>
-                <td>{p.status}</td>
-                <td>{new Date(p.createdAt).toLocaleString()}</td>
-              </tr>
+              <Tr key={p.id}>
+                <Td>
+                  <a href={`/products/${p.id}`} className="font-medium text-primary-600 no-underline hover:text-primary-700 hover:underline">
+                    {p.name}
+                  </a>
+                </Td>
+                <Td>
+                  <StatusBadge label={p.status} tone={toneForStatus(p.status)} />
+                </Td>
+                <Td className="text-ink-subtle">{new Date(p.createdAt).toLocaleString()}</Td>
+              </Tr>
             ))}
           </tbody>
-        </table>
+        </Table>
       )}
-    </main>
+    </div>
   );
 }

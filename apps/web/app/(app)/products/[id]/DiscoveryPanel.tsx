@@ -2,17 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Creator } from "@rdv/domain";
+import { Button } from "../../../../components/ui/Button";
+import { Alert } from "../../../../components/ui/Alert";
+import { FormField, TextInput } from "../../../../components/ui/Form";
+import { StatusBadge } from "../../../../components/ui/StatusBadge";
+import { Table, Thead, Th, Tr, Td } from "../../../../components/ui/Table";
 
 const POLL_INTERVAL_MS = 2000;
 
-/**
- * Wave 2 Phase 3 (plan §8): triggers a narrow YouTube discovery search
- * (POST /api/products/:id/discovery), then polls the run's status
- * (GET .../discovery/:runId) until it completes or fails — the BullMQ
- * job itself is the run record, no separate tracking table. Only
- * rendered when the product has an approved Product Intelligence version
- * (checked by the caller): discovery is otherwise rejected server-side.
- */
 export function DiscoveryPanel({ productId }: { productId: string }) {
   const [query, setQuery] = useState("");
   const [maxResults, setMaxResults] = useState(10);
@@ -84,83 +81,98 @@ export function DiscoveryPanel({ productId }: { productId: string }) {
     void pollOnce(jobId);
   }
 
+  const isRunning = runId && state && state !== "completed" && state !== "failed";
+
   return (
     <div>
-      <form onSubmit={handleSubmit} style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
-          <div>
-            <label htmlFor="discovery-query" style={{ display: "block", fontSize: 13, marginBottom: 2 }}>
-              Search query
-            </label>
-            <input
-              id="discovery-query"
-              type="text"
-              required
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="e.g. home cooking recipes"
-              style={{ padding: 8, width: 280 }}
-            />
-          </div>
-          <div>
-            <label htmlFor="discovery-max" style={{ display: "block", fontSize: 13, marginBottom: 2 }}>
-              Max results
-            </label>
-            <input
-              id="discovery-max"
-              type="number"
-              min={1}
-              max={25}
-              value={maxResults}
-              onChange={(e) => setMaxResults(Number(e.target.value))}
-              style={{ padding: 8, width: 90 }}
-            />
-          </div>
-          <button type="submit" disabled={submitting} style={{ padding: "8px 16px" }}>
-            {submitting ? "Starting…" : "Run discovery"}
-          </button>
-        </div>
+      <form onSubmit={handleSubmit} className="mb-4 flex flex-wrap items-end gap-3">
+        <FormField label="Search query" htmlFor="discovery-query">
+          <TextInput
+            id="discovery-query"
+            type="text"
+            required
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="e.g. home cooking recipes"
+            className="w-72"
+          />
+        </FormField>
+        <FormField label="Max results" htmlFor="discovery-max">
+          <TextInput
+            id="discovery-max"
+            type="number"
+            min={1}
+            max={25}
+            value={maxResults}
+            onChange={(e) => setMaxResults(Number(e.target.value))}
+            className="w-24"
+          />
+        </FormField>
+        <Button type="submit" variant="primary" disabled={submitting} className="mb-4">
+          {submitting ? "Starting…" : "Run discovery"}
+        </Button>
       </form>
 
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
+      {error && (
+        <div className="mb-3">
+          <Alert tone="danger">{error}</Alert>
+        </div>
+      )}
 
-      {runId && state && state !== "completed" && state !== "failed" && (
-        <p style={{ color: "#666", fontSize: 13 }}>Run {runId}: {state}… (polling every 2s)</p>
+      {isRunning && (
+        <div className="mb-3">
+          <Alert tone="primary">
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-primary-500" />
+              Run {runId}: {state}… (polling every 2s)
+            </span>
+          </Alert>
+        </div>
       )}
 
       {failedReason && (
-        <p style={{ color: "crimson", fontSize: 13 }}>
-          Discovery run {runId} failed: {failedReason}
-        </p>
+        <div className="mb-3">
+          <Alert tone="danger" title={`Discovery run ${runId} failed`}>
+            {failedReason}
+          </Alert>
+        </div>
       )}
 
       {results && (
         <>
-          <p style={{ fontSize: 13, color: "#666" }}>
+          <p className="mb-2 text-supporting text-ink-subtle">
             Run {runId} completed — {results.length} creator{results.length === 1 ? "" : "s"} found.
           </p>
-          {results.length > 0 && (
-            <table cellPadding={8} style={{ borderCollapse: "collapse", width: "100%" }}>
-              <thead>
-                <tr style={{ textAlign: "left", borderBottom: "2px solid #ddd" }}>
-                  <th>Channel</th>
-                  <th>Subscribers</th>
-                  <th>Country</th>
-                  <th>Provenance</th>
-                </tr>
-              </thead>
+          {results.length > 0 ? (
+            <Table>
+              <Thead>
+                <Th>Channel</Th>
+                <Th>Subscribers</Th>
+                <Th>Country</Th>
+                <Th>Provenance</Th>
+              </Thead>
               <tbody>
                 {results.map((c) => (
-                  <tr key={c.id} style={{ borderBottom: "1px solid #eee" }}>
-                    <td>{c.channelUrl ? <a href={c.channelUrl}>{c.displayName ?? c.channelUrl}</a> : (c.displayName ?? "—")}</td>
-                    <td>{c.subscriberCount ?? "—"}</td>
-                    <td>{c.country ?? "—"}</td>
-                    <td>{c.provenance}</td>
-                  </tr>
+                  <Tr key={c.id}>
+                    <Td>
+                      {c.channelUrl ? (
+                        <a href={c.channelUrl} className="text-primary-600 no-underline hover:underline">
+                          {c.displayName ?? c.channelUrl}
+                        </a>
+                      ) : (
+                        c.displayName ?? "—"
+                      )}
+                    </Td>
+                    <Td>{c.subscriberCount ?? "—"}</Td>
+                    <Td>{c.country ?? "—"}</Td>
+                    <Td>
+                      <StatusBadge label={c.provenance} tone="neutral" />
+                    </Td>
+                  </Tr>
                 ))}
               </tbody>
-            </table>
-          )}
+            </Table>
+          ) : null}
         </>
       )}
     </div>
