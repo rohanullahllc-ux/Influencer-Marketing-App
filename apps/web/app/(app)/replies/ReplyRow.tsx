@@ -3,14 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { InboundMessage } from "@rdv/domain";
+import { Card } from "../../../components/ui/Card";
+import { StatusBadge, toneForStatus } from "../../../components/ui/StatusBadge";
+import { Button } from "../../../components/ui/Button";
+import { Alert } from "../../../components/ui/Alert";
 
 const POLL_INTERVAL_MS = 2000;
 
-const MATCH_COLOR: Record<string, string> = { matched: "green", ambiguous: "#b8860b", unknown: "#999" };
-const CLASS_COLOR: Record<string, string> = { interested: "green", not_interested: "#999", needs_human_review: "#b8860b" };
-
-/** Wave 3: one inbound reply — real content, real match status, and (once run) real AI classification with confidence/limitations. */
-export function ReplyRow({ message }: { message: InboundMessage }) {
+export function ReplyRow({
+  message,
+  campaignName,
+  creatorName,
+}: {
+  message: InboundMessage;
+  campaignName?: string;
+  creatorName?: string;
+}) {
   const router = useRouter();
   const [running, setRunning] = useState(false);
   const [state, setState] = useState<string | null>(null);
@@ -64,45 +72,80 @@ export function ReplyRow({ message }: { message: InboundMessage }) {
     void pollOnce(jobId);
   }
 
+  const isRunning = state && state !== "completed" && state !== "failed";
+
   return (
-    <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 16, marginBottom: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-        <span style={{ fontWeight: 600 }}>{message.fromIdentity}</span>
-        <span style={{ fontSize: 12, color: MATCH_COLOR[message.matchStatus] ?? "#333" }}>match: {message.matchStatus}</span>
-        <span style={{ fontSize: 12, color: "#666" }}>{new Date(message.receivedAt).toLocaleString()}</span>
+    <Card
+      title={
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-semibold text-ink">{message.fromIdentity}</span>
+          {(campaignName || creatorName) && (
+            <span className="text-supporting text-ink-faint">
+              {creatorName}
+              {creatorName && campaignName && " · "}
+              {campaignName}
+            </span>
+          )}
+        </div>
+      }
+      actions={
+        <div className="flex items-center gap-2">
+          <StatusBadge label={`match: ${message.matchStatus}`} tone={toneForStatus(message.matchStatus)} />
+          <span className="text-meta text-ink-faint">{new Date(message.receivedAt).toLocaleString()}</span>
+        </div>
+      }
+    >
+      <div className="rounded-card border border-border bg-surface-subtle p-3">
+        {message.subject && <p className="mb-1 font-semibold text-ink">{message.subject}</p>}
+        <p className="whitespace-pre-wrap text-body text-ink">{message.body}</p>
       </div>
-      {message.subject && <p style={{ fontWeight: 600, margin: "8px 0 2px" }}>{message.subject}</p>}
-      <p style={{ whiteSpace: "pre-wrap", fontSize: 14 }}>{message.body}</p>
 
       {message.classification ? (
-        <div style={{ marginTop: 8, fontSize: 13 }}>
-          <span style={{ fontWeight: 600, color: CLASS_COLOR[message.classification] ?? "#333" }}>
-            {message.classification.toUpperCase()}
-          </span>
-          {message.classificationConfidence && <span style={{ color: "#666" }}> · confidence {Number(message.classificationConfidence).toFixed(2)}</span>}
-          {message.classificationLimitations && <p style={{ color: "#666", margin: "4px 0" }}>{message.classificationLimitations}</p>}
+        <div className="mt-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge label={message.classification.replace(/_/g, " ")} tone={toneForStatus(message.classification)} />
+            {message.classificationConfidence && (
+              <span className="text-meta text-ink-faint">confidence {Number(message.classificationConfidence).toFixed(2)}</span>
+            )}
+          </div>
+          {message.classificationLimitations && (
+            <p className="mt-1.5 text-supporting text-ink-subtle">{message.classificationLimitations}</p>
+          )}
           {message.extractedFacts && message.extractedFacts.length > 0 && (
-            <p style={{ color: "#666", margin: "4px 0" }}>Facts: {message.extractedFacts.join("; ")}</p>
+            <p className="mt-1.5 text-supporting text-ink-subtle">Facts: {message.extractedFacts.join("; ")}</p>
           )}
           {message.suggestedDraftId ? (
-            <p style={{ marginTop: 4 }}>
-              Suggested response drafted — review and approve it on <a href="/approvals">/approvals</a>.
+            <p className="mt-2 text-supporting text-ink">
+              Suggested response drafted — review and approve it on{" "}
+              <a href="/approvals" className="text-primary-600 no-underline hover:underline">
+                /approvals
+              </a>
+              .
             </p>
           ) : (
-            <p style={{ color: "#999", marginTop: 4 }}>No suggested response (not_interested, or not matched to a specific campaign/creator).</p>
+            <p className="mt-2 text-supporting text-ink-faint">
+              No suggested response (not interested, or not matched to a specific campaign/creator).
+            </p>
           )}
         </div>
       ) : (
-        <div style={{ marginTop: 8 }}>
-          <button onClick={handleClassify} disabled={running} style={{ padding: "6px 12px" }}>
+        <div className="mt-3 flex items-center gap-3">
+          <Button variant="secondary" onClick={handleClassify} disabled={running}>
             {running ? "Starting…" : "Classify with AI"}
-          </button>
-          {state && state !== "completed" && state !== "failed" && (
-            <span style={{ marginLeft: 12, fontSize: 13, color: "#666" }}>{state}…</span>
+          </Button>
+          {isRunning && (
+            <span className="inline-flex items-center gap-1.5 text-supporting text-ink-subtle">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-primary-500" />
+              {state}…
+            </span>
           )}
         </div>
       )}
-      {error && <p style={{ color: "crimson", fontSize: 13, marginTop: 4 }}>{error}</p>}
-    </div>
+      {error && (
+        <div className="mt-3">
+          <Alert tone="danger">{error}</Alert>
+        </div>
+      )}
+    </Card>
   );
 }
