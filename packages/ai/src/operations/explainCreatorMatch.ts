@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { ValidationError } from "@rdv/lib";
+import { isAiMockModeEnabled } from "@rdv/auth";
 import { registerAiOperation } from "../orchestrator.js";
 import { getWorkspaceAnthropicClient } from "../client.js";
+import { mockExplainCreatorMatch } from "../mock.js";
 
 /**
  * Wave 2 Phase 5 (plan §10, §18): explains, but never decides, whether a
@@ -41,6 +43,10 @@ const SYSTEM_PROMPT = `You are a creator-marketing analyst explaining how well a
 registerAiOperation<ExplainCreatorMatchInput, ExplainCreatorMatchOutput>("explain_creator_match", async (input) => {
   if (!input.creatorName || input.creatorName.trim().length === 0) {
     throw new ValidationError("creatorName is required to explain a creator match");
+  }
+
+  if (await isAiMockModeEnabled(input.workspaceId)) {
+    return mockExplainCreatorMatch(input);
   }
 
   const client = await getWorkspaceAnthropicClient(input.workspaceId);

@@ -61,6 +61,13 @@ export const workspaces = pgTable("workspaces", {
   // no default is guessed here; a workspace without one configured simply
   // has no fallback until an Owner/Admin sets it.
   defaultTimezone: text("default_timezone"),
+  // Mock AI provider (opt-in): when true, packages/ai's operations return
+  // clearly-labeled placeholder output instead of calling the real
+  // Anthropic API — lets a workspace exercise the full AI-assisted
+  // workflow with no key and no API cost. Explicit, human-set toggle
+  // only — never implied by the mere absence of a credential (a missing
+  // key still throws, exactly as before, unless this is turned on).
+  aiMockMode: boolean("ai_mock_mode").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

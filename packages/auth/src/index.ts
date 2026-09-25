@@ -23,3 +23,4 @@ export {
   type CredentialProvider,
   type CredentialStatus,
 } from "./credentials.js";
+export { isAiMockModeEnabled, setAiMockMode } from "./workspaceSettings.js";

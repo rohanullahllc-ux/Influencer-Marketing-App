@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { runAiOperation, listRegisteredAiOperations, assertAllowedAiOperationName } from "@rdv/ai";
-import { createWorkspaceWithOwner } from "@rdv/auth";
+import { createWorkspaceWithOwner, getUserByEmail, setAiMockMode } from "@rdv/auth";
 import { resetDb } from "./helpers.js";
 
 /**
@@ -59,5 +59,32 @@ describe("AI Orchestration — explain_creator_match (Wave 2 Phase 5)", () => {
         creatorCountry: null,
       })
     ).rejects.toThrow(/creatorName is required/);
+  });
+
+  it("returns clearly-labeled mock output instead of throwing when Mock AI mode is enabled", async () => {
+    const ws = await createWorkspaceWithOwner({ workspaceName: "Match AI WS Mock", ownerEmail: "match-ai-owner-mock@test.local" });
+    const owner = await getUserByEmail("match-ai-owner-mock@test.local");
+    await setAiMockMode({ workspaceId: ws.id, actorUserId: owner.id, enabled: true });
+
+    const result = await runAiOperation<
+      { workspaceId: string; campaignObjective: string | null; campaignNiches: string[]; productName: string; productAudienceRationale: string | null; creatorName: string; creatorNiche: string | null; creatorSubNiche: string | null; creatorSubscriberCount: number | null; creatorCountry: string | null },
+      { explanation: string; limitations: string | null; score: number }
+    >("explain_creator_match", {
+      workspaceId: ws.id,
+      campaignObjective: "Drive trial",
+      campaignNiches: ["cooking"],
+      productName: "Meal Kit Co",
+      productAudienceRationale: null,
+      creatorName: "Big Cook",
+      creatorNiche: "cooking",
+      creatorSubNiche: null,
+      creatorSubscriberCount: 5000,
+      creatorCountry: "US",
+    });
+
+    expect(result.data.explanation).toMatch(/\[MOCK\]/);
+    expect(result.data.limitations).toMatch(/\[MOCK DATA\]/);
+    expect(result.data.score).toBeGreaterThanOrEqual(0);
+    expect(result.data.score).toBeLessThanOrEqual(1);
   });
 });

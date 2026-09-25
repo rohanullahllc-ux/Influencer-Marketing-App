@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { ValidationError } from "@rdv/lib";
+import { isAiMockModeEnabled } from "@rdv/auth";
 import { registerAiOperation } from "../orchestrator.js";
 import { getWorkspaceAnthropicClient } from "../client.js";
+import { mockAnalyzeProduct } from "../mock.js";
 
 /**
  * Wave 2 Phase 2 (plan §7, §14.2, §18): the first real product AI
@@ -45,6 +47,10 @@ const SYSTEM_PROMPT = `You are a market research analyst preparing creator-marke
 registerAiOperation<AnalyzeProductInput, AnalyzeProductOutput>("analyze_product", async (input) => {
   if (!input.productName || input.productName.trim().length === 0) {
     throw new ValidationError("productName is required to analyze a product");
+  }
+
+  if (await isAiMockModeEnabled(input.workspaceId)) {
+    return mockAnalyzeProduct(input);
   }
 
   const client = await getWorkspaceAnthropicClient(input.workspaceId);
