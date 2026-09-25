@@ -3,23 +3,23 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Approval } from "@rdv/domain";
+import { Card } from "../../../components/ui/Card";
+import { StatusBadge, toneForStatus } from "../../../components/ui/StatusBadge";
+import { Button } from "../../../components/ui/Button";
+import { Alert } from "../../../components/ui/Alert";
+import { TextInput, TextArea } from "../../../components/ui/Form";
 
-const STATUS_COLOR: Record<string, string> = {
-  pending: "#b8860b",
-  approved: "green",
-  rejected: "crimson",
-  returned_for_edit: "#b8860b",
-  invalidated: "#999",
-};
-
-/**
- * Wave 2 Phase 6 (plan §11): one row in the central Approval Queue —
- * exact recipient/campaign/content, with Approve/Reject/Request-edit
- * actions (Admin-only server-side), plus an inline "edit the underlying
- * draft" affordance that demonstrates the invalidation rule directly: an
- * edit here, if this approval is still pending/approved, invalidates it.
- */
-export function ApprovalRow({ approval, canDecide }: { approval: Approval; canDecide: boolean }) {
+export function ApprovalRow({
+  approval,
+  canDecide,
+  campaignName,
+  creatorName,
+}: {
+  approval: Approval;
+  canDecide: boolean;
+  campaignName: string;
+  creatorName: string;
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [subject, setSubject] = useState(approval.exactSubject);
@@ -88,77 +88,93 @@ export function ApprovalRow({ approval, canDecide }: { approval: Approval; canDe
   const isApproved = approval.status === "approved";
 
   return (
-    <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 16, marginBottom: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <span style={{ fontWeight: 600, color: STATUS_COLOR[approval.status] ?? "#333" }}>{approval.status.toUpperCase()}</span>
-        <span style={{ fontSize: 12, color: "#666" }}>{new Date(approval.createdAt).toLocaleString()}</span>
-      </div>
-      <p style={{ fontSize: 12, color: "#666", margin: "4px 0" }}>
-        Campaign {approval.campaignId} · Creator {approval.creatorId} · content hash {approval.contentHash.slice(0, 12)}…
-      </p>
-
+    <Card
+      className={isPending ? "border-warning-200" : undefined}
+      title={
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusBadge label={approval.status.replace(/_/g, " ")} tone={toneForStatus(approval.status)} />
+          <span className="text-supporting font-medium text-ink">
+            {campaignName} <span className="text-ink-faint">·</span> {creatorName}
+          </span>
+        </div>
+      }
+      actions={
+        <span className="text-meta text-ink-faint" title={`content hash ${approval.contentHash}`}>
+          {new Date(approval.createdAt).toLocaleString()}
+        </span>
+      }
+    >
       {editing ? (
         <form onSubmit={handleEditDraft}>
-          <div style={{ marginBottom: 8 }}>
-            <label style={{ display: "block", fontSize: 13 }}>Subject</label>
-            <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} style={{ width: "100%", padding: 6 }} />
+          <div className="mb-3">
+            <label className="mb-1 block text-supporting font-medium text-ink">Subject</label>
+            <TextInput type="text" value={subject} onChange={(e) => setSubject(e.target.value)} />
           </div>
-          <div style={{ marginBottom: 8 }}>
-            <label style={{ display: "block", fontSize: 13 }}>Body</label>
-            <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} style={{ width: "100%", padding: 6 }} />
+          <div className="mb-3">
+            <label className="mb-1 block text-supporting font-medium text-ink">Body</label>
+            <TextArea value={body} onChange={(e) => setBody(e.target.value)} rows={5} />
           </div>
-          <button type="submit" disabled={submitting} style={{ padding: "6px 12px", marginRight: 8 }}>
-            Save edit (invalidates this approval if it's pending/approved)
-          </button>
-          <button type="button" onClick={() => setEditing(false)} style={{ padding: "6px 12px" }}>
-            Cancel
-          </button>
+          <div className="mb-3">
+            <Alert tone="warning">Saving invalidates this approval if it&apos;s still pending or approved — the content changed.</Alert>
+          </div>
+          <div className="flex gap-2">
+            <Button type="submit" variant="primary" disabled={submitting}>
+              Save edit
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
+              Cancel
+            </Button>
+          </div>
         </form>
       ) : (
-        <>
-          <p style={{ fontWeight: 600, margin: "8px 0 2px" }}>{approval.exactSubject}</p>
-          <p style={{ whiteSpace: "pre-wrap", fontSize: 14 }}>{approval.exactBody}</p>
-        </>
+        <div className="rounded-card border border-border bg-surface-subtle p-3">
+          <p className="mb-1 font-semibold text-ink">{approval.exactSubject}</p>
+          <p className="whitespace-pre-wrap text-body text-ink">{approval.exactBody}</p>
+        </div>
       )}
 
-      {error && <p style={{ color: "crimson", fontSize: 13 }}>{error}</p>}
+      {error && (
+        <div className="mt-3">
+          <Alert tone="danger">{error}</Alert>
+        </div>
+      )}
 
       {!editing && (
-        <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center" }}>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           {isPending && canDecide && (
             <>
-              <button onClick={() => decide("approve")} disabled={submitting} style={{ padding: "6px 12px" }}>
+              <Button variant="primary" onClick={() => decide("approve")} disabled={submitting}>
                 Approve
-              </button>
-              <button onClick={() => decide("reject")} disabled={submitting} style={{ padding: "6px 12px" }}>
+              </Button>
+              <Button variant="secondary" onClick={() => decide("reject")} disabled={submitting}>
                 Reject
-              </button>
-              <button onClick={() => decide("request-edit")} disabled={submitting} style={{ padding: "6px 12px" }}>
+              </Button>
+              <Button variant="secondary" onClick={() => decide("request-edit")} disabled={submitting}>
                 Request edit
-              </button>
+              </Button>
             </>
           )}
-          <button onClick={() => setEditing(true)} disabled={submitting} style={{ padding: "6px 12px" }}>
+          <Button variant="ghost" onClick={() => setEditing(true)} disabled={submitting}>
             Edit underlying draft
-          </button>
+          </Button>
           {isApproved && !sendStatus && (
-            <button onClick={handleScheduleSend} disabled={scheduling} style={{ padding: "6px 12px" }}>
+            <Button variant="primary" onClick={handleScheduleSend} disabled={scheduling}>
               {scheduling ? "Scheduling…" : "Schedule send"}
-            </button>
+            </Button>
           )}
           {sendStatus && (
-            <span style={{ fontSize: 13, color: "#666" }}>
-              Send {sendStatus} — see the campaign&apos;s Sends panel for live status.
+            <span className="text-supporting text-ink-subtle">
+              Send {sendStatus} — see the campaign&apos;s Sends tab for live status.
             </span>
           )}
         </div>
       )}
       {approval.decidedAt && (
-        <p style={{ fontSize: 12, color: "#666", marginTop: 8 }}>
+        <p className="mt-3 text-meta text-ink-faint">
           Decided {new Date(approval.decidedAt).toLocaleString()}
           {approval.decisionNotes ? ` — ${approval.decisionNotes}` : ""}
         </p>
       )}
-    </div>
+    </Card>
   );
 }
