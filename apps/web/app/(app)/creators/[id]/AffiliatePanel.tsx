@@ -3,15 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CreatorAffiliate, WhopConversion } from "@rdv/domain";
+import { Button } from "../../../../components/ui/Button";
+import { Alert } from "../../../../components/ui/Alert";
+import { StatusBadge, toneForStatus } from "../../../../components/ui/StatusBadge";
+import { EmptyState } from "../../../../components/ui/EmptyState";
+import { Table, Thead, Th, Tr, Td } from "../../../../components/ui/Table";
 
 const POLL_INTERVAL_MS = 2000;
 const TERMINAL_STATUSES = new Set(["active", "failed", "unknown", "revoked"]);
 
-/**
- * Wave 4 (Whop Affiliate/Conversion): human-triggered only. The durable
- * creator_affiliates row (not a BullMQ job id) is what's polled, same
- * pattern as outreach sends — a real Whop call may not resolve instantly.
- */
 export function AffiliatePanel({ creatorId, initialAffiliates }: { creatorId: string; initialAffiliates: CreatorAffiliate[] }) {
   const router = useRouter();
   const current = initialAffiliates[0] ?? null;
@@ -62,51 +62,63 @@ export function AffiliatePanel({ creatorId, initialAffiliates }: { creatorId: st
   return (
     <div>
       {current ? (
-        <div style={{ fontSize: 13, marginBottom: 12 }}>
-          <p>
-            Status: <strong>{current.status}</strong>
-            {current.statusReason && <span style={{ color: "#666" }}> — {current.statusReason}</span>}
-          </p>
+        <div>
+          <div className="mb-3 flex items-center gap-2">
+            <StatusBadge label={current.status} tone={toneForStatus(current.status)} />
+            {current.statusReason && <span className="text-supporting text-ink-subtle">{current.statusReason}</span>}
+          </div>
           {current.status === "active" && (
             <>
-              <p>
-                Affiliate code: <strong>{current.affiliateCode}</strong> (provider id: {current.providerAffiliateId})
+              <p className="mb-3 text-supporting text-ink">
+                Affiliate code: <strong className="text-ink">{current.affiliateCode}</strong>{" "}
+                <span className="text-ink-faint">(provider id: {current.providerAffiliateId})</span>
               </p>
               {conversions.length === 0 ? (
-                <p style={{ color: "#666" }}>No conversions recorded yet.</p>
+                <EmptyState title="No conversions recorded yet" />
               ) : (
-                <table cellPadding={4} style={{ borderCollapse: "collapse", fontSize: 13 }}>
-                  <thead>
-                    <tr style={{ textAlign: "left", borderBottom: "2px solid #ddd" }}>
-                      <th>Type</th>
-                      <th>When</th>
-                      <th>Amount</th>
-                    </tr>
-                  </thead>
+                <Table>
+                  <Thead>
+                    <Th>Type</Th>
+                    <Th>When</Th>
+                    <Th>Amount</Th>
+                  </Thead>
                   <tbody>
                     {conversions.map((c) => (
-                      <tr key={c.id} style={{ borderBottom: "1px solid #eee" }}>
-                        <td>{c.eventType}</td>
-                        <td>{new Date(c.occurredAt).toLocaleString()}</td>
-                        <td>{c.amount ? `${c.amount} ${c.currency ?? ""}` : "—"}</td>
-                      </tr>
+                      <Tr key={c.id}>
+                        <Td>
+                          <StatusBadge label={c.eventType} tone="success" />
+                        </Td>
+                        <Td className="text-ink-subtle">{new Date(c.occurredAt).toLocaleString()}</Td>
+                        <Td className="font-medium">{c.amount ? `${c.amount} ${c.currency ?? ""}` : "—"}</Td>
+                      </Tr>
                     ))}
                   </tbody>
-                </table>
+                </Table>
               )}
             </>
           )}
-          {!TERMINAL_STATUSES.has(current.status) && <p style={{ color: "#666" }}>Waiting on the provider…</p>}
+          {!TERMINAL_STATUSES.has(current.status) && (
+            <p className="mt-2 inline-flex items-center gap-1.5 text-supporting text-ink-subtle">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-primary-500" />
+              Waiting on the provider…
+            </p>
+          )}
         </div>
       ) : (
         <div>
-          <p style={{ color: "#666", marginBottom: 8 }}>No affiliate relationship yet.</p>
-          <button onClick={handleRequest} disabled={requesting} style={{ padding: "6px 12px" }}>
+          <div className="mb-3">
+            <EmptyState title="No affiliate relationship yet" />
+          </div>
+          <Button variant="primary" onClick={handleRequest} disabled={requesting}>
             {requesting ? "Requesting…" : "Request affiliate creation"}
-          </button>
+          </Button>
         </div>
       )}
-      {error && <p style={{ color: "crimson", fontSize: 13, marginTop: 4 }}>{error}</p>}
+      {error && (
+        <div className="mt-2">
+          <Alert tone="danger">{error}</Alert>
+        </div>
+      )}
     </div>
   );
 }

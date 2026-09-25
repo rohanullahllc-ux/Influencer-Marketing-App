@@ -2,8 +2,13 @@ import { listCreators } from "@rdv/domain";
 import { AuthorizationError } from "@rdv/lib";
 import { requireSession } from "../../../lib/session";
 import { ManualCreatorForm } from "./ManualCreatorForm";
+import { PageHeader } from "../../../components/ui/PageHeader";
+import { ButtonLink } from "../../../components/ui/Button";
+import { EmptyState } from "../../../components/ui/EmptyState";
+import { StatusBadge, toneForStatus } from "../../../components/ui/StatusBadge";
+import { Table, Thead, Th, Tr, Td } from "../../../components/ui/Table";
+import { Card } from "../../../components/ui/Card";
 
-/** Wave 2 Phase 3 (plan §8): all creators in the workspace — YouTube-discovered and manually entered — plus the manual-add form. */
 export default async function CreatorsPage() {
   let actor;
   try {
@@ -11,11 +16,11 @@ export default async function CreatorsPage() {
   } catch (err) {
     if (err instanceof AuthorizationError) {
       return (
-        <main style={{ padding: 32 }}>
-          <p>
-            You must <a href="/login">sign in</a> to view this page.
-          </p>
-        </main>
+        <EmptyState
+          title="Sign in required"
+          description="You must sign in to view creators."
+          action={<ButtonLink href="/login" variant="primary">Sign in</ButtonLink>}
+        />
       );
     }
     throw err;
@@ -24,42 +29,52 @@ export default async function CreatorsPage() {
   const creators = await listCreators({ workspaceId: actor.workspaceId, actorUserId: actor.userId });
 
   return (
-    <main style={{ padding: 32, maxWidth: 900 }}>
-      <h1>Creators</h1>
+    <div>
+      <PageHeader title="Creators" description="Every discovered or manually-added creator in this workspace." />
 
       {creators.length === 0 ? (
-        <p style={{ color: "#666" }}>No creators yet — run discovery from a product page, or add one manually below.</p>
+        <EmptyState
+          title="No creators yet"
+          description="Run discovery from a product page, or add one manually below."
+        />
       ) : (
-        <table cellPadding={8} style={{ borderCollapse: "collapse", width: "100%", marginBottom: 32 }}>
-          <thead>
-            <tr style={{ textAlign: "left", borderBottom: "2px solid #ddd" }}>
-              <th>Name</th>
-              <th>Platform</th>
-              <th>Provenance</th>
-              <th>Subscribers</th>
-              <th>Country</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {creators.map((c) => (
-              <tr key={c.id} style={{ borderBottom: "1px solid #eee" }}>
-                <td>
-                  <a href={`/creators/${c.id}`}>{c.displayName ?? c.channelUrl ?? c.id}</a>
-                </td>
-                <td>{c.platform}</td>
-                <td>{c.provenance}</td>
-                <td>{c.subscriberCount ?? "—"}</td>
-                <td>{c.country ?? "—"}</td>
-                <td>{c.status}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="mb-6">
+          <Table>
+            <Thead>
+              <Th>Name</Th>
+              <Th>Platform</Th>
+              <Th>Provenance</Th>
+              <Th>Subscribers</Th>
+              <Th>Country</Th>
+              <Th>Status</Th>
+            </Thead>
+            <tbody>
+              {creators.map((c) => (
+                <Tr key={c.id}>
+                  <Td>
+                    <a href={`/creators/${c.id}`} className="font-medium text-primary-600 no-underline hover:text-primary-700 hover:underline">
+                      {c.displayName ?? c.channelUrl ?? c.id}
+                    </a>
+                  </Td>
+                  <Td className="capitalize">{c.platform}</Td>
+                  <Td>
+                    <StatusBadge label={c.provenance} tone="neutral" />
+                  </Td>
+                  <Td>{c.subscriberCount?.toLocaleString() ?? "—"}</Td>
+                  <Td>{c.country ?? "—"}</Td>
+                  <Td>
+                    <StatusBadge label={c.status} tone={toneForStatus(c.status)} />
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
       )}
 
-      <h2>Add a creator manually</h2>
-      <ManualCreatorForm />
-    </main>
+      <Card title="Add a creator manually" className="max-w-xl">
+        <ManualCreatorForm />
+      </Card>
+    </div>
   );
 }

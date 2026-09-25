@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { FormField, TextInput } from "../../../components/ui/Form";
+import { Button } from "../../../components/ui/Button";
+import { Alert } from "../../../components/ui/Alert";
 
-/** Wave 2 Phase 3 (plan §8): manual creator entry — POST /api/creators, tagged provenance: human_entered by the API. */
 export function ManualCreatorForm() {
   const router = useRouter();
   const [displayName, setDisplayName] = useState("");
@@ -47,72 +49,32 @@ export function ManualCreatorForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 480 }}>
-      <div style={{ marginBottom: 10 }}>
-        <label htmlFor="displayName" style={{ display: "block", marginBottom: 4 }}>
-          Name
-        </label>
-        <input
-          id="displayName"
-          type="text"
-          required
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          style={{ width: "100%", padding: 8 }}
-        />
+    <form onSubmit={handleSubmit}>
+      <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+        <FormField label="Name" htmlFor="displayName" required>
+          <TextInput id="displayName" type="text" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+        </FormField>
+        <FormField label="Channel URL" htmlFor="channelUrl">
+          <TextInput id="channelUrl" type="text" value={channelUrl} onChange={(e) => setChannelUrl(e.target.value)} />
+        </FormField>
+        <FormField label="Niche" htmlFor="niche">
+          <TextInput id="niche" type="text" value={niche} onChange={(e) => setNiche(e.target.value)} />
+        </FormField>
+        <FormField label="Country" htmlFor="country">
+          <TextInput id="country" type="text" value={country} onChange={(e) => setCountry(e.target.value)} />
+        </FormField>
+        <FormField label="Contact email" htmlFor="contactEmail">
+          <TextInput id="contactEmail" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} />
+        </FormField>
       </div>
-      <div style={{ marginBottom: 10 }}>
-        <label htmlFor="channelUrl" style={{ display: "block", marginBottom: 4 }}>
-          Channel URL
-        </label>
-        <input
-          id="channelUrl"
-          type="text"
-          value={channelUrl}
-          onChange={(e) => setChannelUrl(e.target.value)}
-          style={{ width: "100%", padding: 8 }}
-        />
-      </div>
-      <div style={{ marginBottom: 10 }}>
-        <label htmlFor="niche" style={{ display: "block", marginBottom: 4 }}>
-          Niche
-        </label>
-        <input
-          id="niche"
-          type="text"
-          value={niche}
-          onChange={(e) => setNiche(e.target.value)}
-          style={{ width: "100%", padding: 8 }}
-        />
-      </div>
-      <div style={{ marginBottom: 10 }}>
-        <label htmlFor="country" style={{ display: "block", marginBottom: 4 }}>
-          Country
-        </label>
-        <input
-          id="country"
-          type="text"
-          value={country}
-          onChange={(e) => setCountry(e.target.value)}
-          style={{ width: "100%", padding: 8 }}
-        />
-      </div>
-      <div style={{ marginBottom: 10 }}>
-        <label htmlFor="contactEmail" style={{ display: "block", marginBottom: 4 }}>
-          Contact email
-        </label>
-        <input
-          id="contactEmail"
-          type="email"
-          value={contactEmail}
-          onChange={(e) => setContactEmail(e.target.value)}
-          style={{ width: "100%", padding: 8 }}
-        />
-      </div>
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
-      <button type="submit" disabled={submitting} style={{ padding: "8px 16px" }}>
+      {error && (
+        <div className="mb-3">
+          <Alert tone="danger">{error}</Alert>
+        </div>
+      )}
+      <Button type="submit" variant="primary" disabled={submitting}>
         {submitting ? "Adding…" : "Add creator"}
-      </button>
+      </Button>
     </form>
   );
 }

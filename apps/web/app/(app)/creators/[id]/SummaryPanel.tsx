@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CreatorConversationSummary } from "@rdv/domain";
+import { Button } from "../../../../components/ui/Button";
+import { Alert } from "../../../../components/ui/Alert";
 
 const POLL_INTERVAL_MS = 2000;
 
-/** Wave 4 (Creator CRM): AI conversation summaries — read-only, append-only, never fabricated (fails loudly if there's no real history to summarize). */
 export function SummaryPanel({
   creatorId,
   initialSummaries,
@@ -70,15 +71,18 @@ export function SummaryPanel({
   }
 
   const latest = initialSummaries[0];
+  const isRunning = state && state !== "completed" && state !== "failed";
 
   return (
     <div>
       {latest ? (
-        <div style={{ fontSize: 13, marginBottom: 12, border: "1px solid #eee", borderRadius: 6, padding: 12 }}>
-          <div style={{ color: "#666", fontSize: 12, marginBottom: 4 }}>Generated {latest.generatedAt.toLocaleString()} (from {latest.basedOnMessageCount} messages)</div>
-          <p style={{ margin: 0 }}>{latest.summary}</p>
+        <div className="mb-3 rounded-card border border-border bg-surface-subtle p-3">
+          <div className="mb-1 text-meta text-ink-faint">
+            Generated {latest.generatedAt.toLocaleString()} (from {latest.basedOnMessageCount} messages)
+          </div>
+          <p className="m-0 text-supporting text-ink">{latest.summary}</p>
           {latest.keyPoints && latest.keyPoints.length > 0 && (
-            <ul style={{ marginTop: 8, marginBottom: 0 }}>
+            <ul className="mb-0 mt-2 list-disc pl-5 text-supporting text-ink">
               {latest.keyPoints.map((p, i) => (
                 <li key={i}>{p}</li>
               ))}
@@ -86,18 +90,29 @@ export function SummaryPanel({
           )}
         </div>
       ) : (
-        <p style={{ color: "#666" }}>No summary generated yet.</p>
+        <p className="mb-3 text-supporting text-ink-subtle">No summary generated yet.</p>
       )}
 
-      {hasHistory ? (
-        <button onClick={handleGenerate} disabled={running} style={{ padding: "6px 12px" }}>
-          {running ? "Starting…" : latest ? "Regenerate summary" : "Generate summary"}
-        </button>
-      ) : (
-        <p style={{ color: "#999", fontSize: 13 }}>No outreach/reply history yet — nothing to summarize.</p>
+      <div className="flex items-center gap-3">
+        {hasHistory ? (
+          <Button variant="secondary" onClick={handleGenerate} disabled={running}>
+            {running ? "Starting…" : latest ? "Regenerate summary" : "Generate summary"}
+          </Button>
+        ) : (
+          <p className="text-supporting text-ink-faint">No outreach/reply history yet — nothing to summarize.</p>
+        )}
+        {isRunning && (
+          <span className="inline-flex items-center gap-1.5 text-supporting text-ink-subtle">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-primary-500" />
+            {state}…
+          </span>
+        )}
+      </div>
+      {error && (
+        <div className="mt-2">
+          <Alert tone="danger">{error}</Alert>
+        </div>
       )}
-      {state && state !== "completed" && state !== "failed" && <span style={{ marginLeft: 12, fontSize: 13, color: "#666" }}>{state}…</span>}
-      {error && <p style={{ color: "crimson", fontSize: 13, marginTop: 4 }}>{error}</p>}
     </div>
   );
 }

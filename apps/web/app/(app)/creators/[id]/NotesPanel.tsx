@@ -3,8 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CreatorNote } from "@rdv/domain";
+import { TextInput } from "../../../../components/ui/Form";
+import { Button } from "../../../../components/ui/Button";
+import { Alert } from "../../../../components/ui/Alert";
+import { EmptyState } from "../../../../components/ui/EmptyState";
 
-/** Wave 4 (Creator CRM): append-only human notes on a creator. */
 export function NotesPanel({ creatorId, initialNotes }: { creatorId: string; initialNotes: CreatorNote[] }) {
   const router = useRouter();
   const [body, setBody] = useState("");
@@ -34,24 +37,30 @@ export function NotesPanel({ creatorId, initialNotes }: { creatorId: string; ini
   return (
     <div>
       {initialNotes.length === 0 ? (
-        <p style={{ color: "#666" }}>No notes yet.</p>
+        <div className="mb-3">
+          <EmptyState title="No notes yet" />
+        </div>
       ) : (
-        <ul style={{ listStyle: "none", padding: 0, marginBottom: 12 }}>
+        <ul className="mb-3 flex flex-col divide-y divide-border">
           {initialNotes.map((n) => (
-            <li key={n.id} style={{ borderBottom: "1px solid #eee", padding: "8px 0", fontSize: 13 }}>
-              <div style={{ color: "#666", fontSize: 12 }}>{n.createdAt.toLocaleString()}</div>
-              <div style={{ whiteSpace: "pre-wrap" }}>{n.body}</div>
+            <li key={n.id} className="py-2 first:pt-0">
+              <div className="text-meta text-ink-faint">{n.createdAt.toLocaleString()}</div>
+              <div className="whitespace-pre-wrap text-supporting text-ink">{n.body}</div>
             </li>
           ))}
         </ul>
       )}
-      <form onSubmit={handleAdd} style={{ display: "flex", gap: 8 }}>
-        <input value={body} onChange={(e) => setBody(e.target.value)} placeholder="Add a note…" style={{ flex: 1, padding: 6 }} />
-        <button type="submit" disabled={submitting} style={{ padding: "6px 14px" }}>
+      <form onSubmit={handleAdd} className="flex gap-2">
+        <TextInput value={body} onChange={(e) => setBody(e.target.value)} placeholder="Add a note…" className="flex-1" />
+        <Button type="submit" variant="primary" disabled={submitting}>
           {submitting ? "Adding…" : "Add"}
-        </button>
+        </Button>
       </form>
-      {error && <p style={{ color: "crimson", fontSize: 13 }}>{error}</p>}
+      {error && (
+        <div className="mt-2">
+          <Alert tone="danger">{error}</Alert>
+        </div>
+      )}
     </div>
   );
 }

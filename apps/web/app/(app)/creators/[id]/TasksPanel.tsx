@@ -3,8 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CreatorTask } from "@rdv/domain";
+import { TextInput } from "../../../../components/ui/Form";
+import { Button } from "../../../../components/ui/Button";
+import { Alert } from "../../../../components/ui/Alert";
+import { EmptyState } from "../../../../components/ui/EmptyState";
 
-/** Wave 4 (Creator CRM): human-managed follow-up tasks on a creator. */
 export function TasksPanel({ creatorId, initialTasks }: { creatorId: string; initialTasks: CreatorTask[] }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -46,30 +49,34 @@ export function TasksPanel({ creatorId, initialTasks }: { creatorId: string; ini
   return (
     <div>
       {initialTasks.length === 0 ? (
-        <p style={{ color: "#666" }}>No tasks yet.</p>
+        <div className="mb-3">
+          <EmptyState title="No tasks yet" />
+        </div>
       ) : (
-        <ul style={{ listStyle: "none", padding: 0, marginBottom: 12 }}>
+        <ul className="mb-3 flex flex-col divide-y divide-border">
           {initialTasks.map((t) => (
-            <li key={t.id} style={{ borderBottom: "1px solid #eee", padding: "6px 0", fontSize: 13, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ textDecoration: t.status === "done" ? "line-through" : "none", color: t.status === "done" ? "#999" : undefined }}>
-                {t.title}
-              </span>
+            <li key={t.id} className="flex items-center justify-between py-2 first:pt-0">
+              <span className={`text-supporting ${t.status === "done" ? "text-ink-faint line-through" : "text-ink"}`}>{t.title}</span>
               {t.status === "open" && (
-                <button onClick={() => markDone(t.id)} disabled={updatingId === t.id} style={{ padding: "2px 10px", fontSize: 12 }}>
+                <Button size="sm" variant="secondary" onClick={() => markDone(t.id)} disabled={updatingId === t.id}>
                   {updatingId === t.id ? "…" : "Mark done"}
-                </button>
+                </Button>
               )}
             </li>
           ))}
         </ul>
       )}
-      <form onSubmit={handleAdd} style={{ display: "flex", gap: 8 }}>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Add a task…" style={{ flex: 1, padding: 6 }} />
-        <button type="submit" disabled={submitting} style={{ padding: "6px 14px" }}>
+      <form onSubmit={handleAdd} className="flex gap-2">
+        <TextInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Add a task…" className="flex-1" />
+        <Button type="submit" variant="primary" disabled={submitting}>
           {submitting ? "Adding…" : "Add"}
-        </button>
+        </Button>
       </form>
-      {error && <p style={{ color: "crimson", fontSize: 13 }}>{error}</p>}
+      {error && (
+        <div className="mt-2">
+          <Alert tone="danger">{error}</Alert>
+        </div>
+      )}
     </div>
   );
 }

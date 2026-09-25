@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CreatorRelationship } from "@rdv/domain";
+import { FormField, TextInput } from "../../../../components/ui/Form";
+import { Button } from "../../../../components/ui/Button";
+import { Alert } from "../../../../components/ui/Alert";
 
 const STATUSES = ["new", "contacted", "in_conversation", "negotiating", "partnered", "declined", "unresponsive", "do_not_contact"] as const;
 
-/** Wave 4 (Creator CRM): lifecycle/relationship status + next action, human-set only. */
 export function RelationshipPanel({ creatorId, relationship }: { creatorId: string; relationship: CreatorRelationship }) {
   const router = useRouter();
   const [status, setStatus] = useState(relationship.status);
@@ -33,32 +35,39 @@ export function RelationshipPanel({ creatorId, relationship }: { creatorId: stri
   }
 
   return (
-    <form onSubmit={handleSave} style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
-      <label>
-        Status
-        <br />
-        <select value={status} onChange={(e) => setStatus(e.target.value as typeof status)} style={{ padding: 6 }}>
+    <form onSubmit={handleSave} className="flex flex-wrap items-end gap-3">
+      <FormField label="Status" htmlFor="status">
+        <select
+          id="status"
+          value={status}
+          onChange={(e) => setStatus(e.target.value as typeof status)}
+          className="rounded-control border border-border-strong bg-white px-3 py-2 text-body text-ink focus-visible:focus-ring"
+        >
           {STATUSES.map((s) => (
             <option key={s} value={s}>
               {s.replace(/_/g, " ")}
             </option>
           ))}
         </select>
-      </label>
-      <label style={{ flex: 1, minWidth: 220 }}>
-        Next action
-        <br />
-        <input
-          value={nextAction}
-          onChange={(e) => setNextAction(e.target.value)}
-          placeholder="e.g. Follow up next Tuesday"
-          style={{ padding: 6, width: "100%" }}
-        />
-      </label>
-      <button type="submit" disabled={submitting} style={{ padding: "8px 14px" }}>
+      </FormField>
+      <div className="min-w-[220px] flex-1">
+        <FormField label="Next action" htmlFor="nextAction">
+          <TextInput
+            id="nextAction"
+            value={nextAction}
+            onChange={(e) => setNextAction(e.target.value)}
+            placeholder="e.g. Follow up next Tuesday"
+          />
+        </FormField>
+      </div>
+      <Button type="submit" variant="primary" disabled={submitting} className="mb-4">
         {submitting ? "Saving…" : "Save"}
-      </button>
-      {error && <p style={{ color: "crimson", fontSize: 13, width: "100%" }}>{error}</p>}
+      </Button>
+      {error && (
+        <div className="w-full">
+          <Alert tone="danger">{error}</Alert>
+        </div>
+      )}
     </form>
   );
 }
