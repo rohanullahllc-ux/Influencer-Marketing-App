@@ -3,6 +3,13 @@ import { getOpsQueueDetail } from "../../../lib/opsQueueDetail";
 import { AuthorizationError } from "@rdv/lib";
 import { requireSession } from "../../../lib/session";
 import { RetryJobButton } from "./RetryJobButton";
+import { PageHeader } from "../../../components/ui/PageHeader";
+import { ButtonLink } from "../../../components/ui/Button";
+import { EmptyState } from "../../../components/ui/EmptyState";
+import { Card } from "../../../components/ui/Card";
+import { Alert } from "../../../components/ui/Alert";
+import { StatusBadge } from "../../../components/ui/StatusBadge";
+import { Table, Thead, Th, Tr, Td } from "../../../components/ui/Table";
 
 /**
  * Operations surface. Wave 1 proved the surface exists and reads real
@@ -14,12 +21,12 @@ import { RetryJobButton } from "./RetryJobButton";
  * `removeOnFail: false` (packages/queue/src/queues.ts) was configured to
  * keep available for this page.
  *
- * Now gated behind an authenticated Owner/Admin session (Wave 6 finding:
- * this page previously had no auth check at all, and was about to start
- * showing real job payloads — workspace/creator/email data — which must
- * never be exposed without authentication). `/api/health` remains
- * deliberately unauthenticated for deployment/orchestration tooling; this
- * human-facing dashboard is a different, more sensitive surface.
+ * Gated behind an authenticated Owner/Admin session (Wave 6 finding: this
+ * page previously had no auth check at all, and shows real job payloads —
+ * workspace/creator/email data — which must never be exposed without
+ * authentication). `/api/health` remains deliberately unauthenticated for
+ * deployment/orchestration tooling; this human-facing dashboard is a
+ * different, more sensitive surface.
  */
 export default async function OpsPage() {
   let actor;
@@ -28,146 +35,151 @@ export default async function OpsPage() {
   } catch (err) {
     if (err instanceof AuthorizationError) {
       return (
-        <main style={{ padding: 32 }}>
-          <p>
-            You must <a href="/login">sign in</a> to view this page.
-          </p>
-        </main>
+        <EmptyState
+          title="Sign in required"
+          description="You must sign in to view Operations."
+          action={<ButtonLink href="/login" variant="primary">Sign in</ButtonLink>}
+        />
       );
     }
     throw err;
   }
 
   if (actor.role !== "owner" && actor.role !== "admin") {
-    return (
-      <main style={{ padding: 32 }}>
-        <p>Only an Owner or Admin may view Operations.</p>
-      </main>
-    );
+    return <EmptyState title="Restricted" description="Only an Owner or Admin may view Operations." />;
   }
 
   const health = await getSystemHealth();
   const detail = await getOpsQueueDetail();
 
   return (
-    <main style={{ padding: 32, maxWidth: 880 }}>
-      <h1>Operations</h1>
-      <p>
-        Overall status:{" "}
-        <strong style={{ color: health.status === "ok" ? "green" : "crimson" }}>
-          {health.status.toUpperCase()}
-        </strong>
-      </p>
+    <div>
+      <PageHeader title="Operations" description="Live infrastructure health, queue state, and job reliability — read directly from Postgres/Redis, nothing cached or simulated." />
 
-      <h2>Dependency checks</h2>
-      <table cellPadding={6} style={{ borderCollapse: "collapse" }}>
-        <tbody>
-          {Object.entries(health.checks).map(([name, check]) => (
-            <tr key={name} style={{ borderBottom: "1px solid #ddd" }}>
-              <td>{name}</td>
-              <td style={{ color: check.ok ? "green" : "crimson" }}>{check.ok ? "OK" : "FAIL"}</td>
-              <td>{check.error ?? ""}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <Alert tone={health.status === "ok" ? "success" : "danger"} title={`Overall status: ${health.status.toUpperCase()}`}>
+        Checked at {new Date(health.timestamp).toLocaleString()}
+      </Alert>
 
-      <h2 style={{ marginTop: 24 }}>Queue lanes — real per-state counts</h2>
-      <table cellPadding={6} style={{ borderCollapse: "collapse", fontSize: 13 }}>
-        <thead>
-          <tr style={{ textAlign: "left", borderBottom: "2px solid #ddd" }}>
-            <th>Lane</th>
-            <th>Waiting</th>
-            <th>Active</th>
-            <th>Delayed</th>
-            <th>Failed</th>
-            <th>Completed (last 7d)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Object.entries(detail.countsByLane).map(([lane, counts]) => (
-            <tr key={lane} style={{ borderBottom: "1px solid #eee" }}>
-              <td>{lane}</td>
-              <td>{counts.waiting}</td>
-              <td>{counts.active}</td>
-              <td>{counts.delayed}</td>
-              <td style={{ color: counts.failed > 0 ? "crimson" : undefined }}>{counts.failed}</td>
-              <td>{counts.completed}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <h2 style={{ marginTop: 24 }}>Possibly stuck jobs</h2>
-      <p style={{ fontSize: 13, color: "#666" }}>
-        An active job processing longer than 2 minutes against local Mock providers — worth a human look, nothing
-        here cancels or kills a job automatically.
-      </p>
-      {detail.stuckJobs.length === 0 ? (
-        <p style={{ color: "#666" }}>None.</p>
-      ) : (
-        <table cellPadding={6} style={{ borderCollapse: "collapse", fontSize: 13 }}>
-          <thead>
-            <tr style={{ textAlign: "left", borderBottom: "2px solid #ddd" }}>
-              <th>Lane</th>
-              <th>Job</th>
-              <th>Processing for</th>
-            </tr>
-          </thead>
+      <Card title="Dependency checks" className="mt-4">
+        <Table>
+          <Thead>
+            <Th>Dependency</Th>
+            <Th>Status</Th>
+            <Th>Error</Th>
+          </Thead>
           <tbody>
-            {detail.stuckJobs.map((j) => (
-              <tr key={`${j.lane}-${j.id}`} style={{ borderBottom: "1px solid #eee" }}>
-                <td>{j.lane}</td>
-                <td>
-                  {j.name} ({j.id})
-                </td>
-                <td>{Math.round(j.processingForMs / 1000)}s</td>
-              </tr>
+            {Object.entries(health.checks).map(([name, check]) => (
+              <Tr key={name}>
+                <Td className="font-medium text-ink">{name}</Td>
+                <Td>
+                  <StatusBadge label={check.ok ? "OK" : "FAIL"} tone={check.ok ? "success" : "danger"} />
+                </Td>
+                <Td className="max-w-md whitespace-normal text-ink-subtle">{check.error ?? "—"}</Td>
+              </Tr>
             ))}
           </tbody>
-        </table>
-      )}
+        </Table>
+      </Card>
 
-      <h2 style={{ marginTop: 24 }}>Failed jobs</h2>
-      <p style={{ fontSize: 13, color: "#666" }}>
-        Real failures, retained on purpose (never auto-removed) so every one is reconcilable — never treated as
-        proof the underlying action failed on the provider side too (see each domain module's own interruption-
-        safety design for outreach sends / affiliate creation).
-      </p>
-      {detail.failedJobs.length === 0 ? (
-        <p style={{ color: "#666" }}>None.</p>
-      ) : (
-        <table cellPadding={6} style={{ borderCollapse: "collapse", fontSize: 13, width: "100%" }}>
-          <thead>
-            <tr style={{ textAlign: "left", borderBottom: "2px solid #ddd" }}>
-              <th>Lane</th>
-              <th>Job</th>
-              <th>Attempts</th>
-              <th>Reason</th>
-              <th>When</th>
-              <th></th>
-            </tr>
-          </thead>
+      <Card title="Queue lanes — real per-state counts" className="mt-4">
+        <Table>
+          <Thead>
+            <Th>Lane</Th>
+            <Th>Waiting</Th>
+            <Th>Active</Th>
+            <Th>Delayed</Th>
+            <Th>Failed</Th>
+            <Th>Completed (last 7d)</Th>
+          </Thead>
           <tbody>
-            {detail.failedJobs.map((j) => (
-              <tr key={`${j.lane}-${j.id}`} style={{ borderBottom: "1px solid #eee" }}>
-                <td>{j.lane}</td>
-                <td>
-                  {j.name} ({j.id})
-                </td>
-                <td>{j.attemptsMade}</td>
-                <td style={{ maxWidth: 320, overflowWrap: "break-word" }}>{j.failedReason}</td>
-                <td>{new Date(j.timestamp).toLocaleString()}</td>
-                <td>
-                  <RetryJobButton lane={j.lane} jobId={j.id} />
-                </td>
-              </tr>
+            {Object.entries(detail.countsByLane).map(([lane, counts]) => (
+              <Tr key={lane}>
+                <Td className="font-medium text-ink">{lane}</Td>
+                <Td>{counts.waiting}</Td>
+                <Td>{counts.active}</Td>
+                <Td>{counts.delayed}</Td>
+                <Td>
+                  {counts.failed > 0 ? (
+                    <StatusBadge label={String(counts.failed)} tone="danger" />
+                  ) : (
+                    <span className="text-ink-faint">0</span>
+                  )}
+                </Td>
+                <Td>{counts.completed}</Td>
+              </Tr>
             ))}
           </tbody>
-        </table>
-      )}
+        </Table>
+      </Card>
 
-      <p style={{ color: "#666", fontSize: 14, marginTop: 24 }}>Checked at {health.timestamp}</p>
-    </main>
+      <Card title="Possibly stuck jobs" className="mt-4">
+        <p className="mb-3 text-supporting text-ink-subtle">
+          An active job processing longer than 2 minutes against local Mock providers — worth a human look, nothing here
+          cancels or kills a job automatically.
+        </p>
+        {detail.stuckJobs.length === 0 ? (
+          <p className="text-supporting text-ink-faint">None.</p>
+        ) : (
+          <Table>
+            <Thead>
+              <Th>Lane</Th>
+              <Th>Job</Th>
+              <Th>Processing for</Th>
+            </Thead>
+            <tbody>
+              {detail.stuckJobs.map((j) => (
+                <Tr key={`${j.lane}-${j.id}`}>
+                  <Td>{j.lane}</Td>
+                  <Td>
+                    {j.name} ({j.id})
+                  </Td>
+                  <Td>
+                    <StatusBadge label={`${Math.round(j.processingForMs / 1000)}s`} tone="warning" />
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </Card>
+
+      <Card title="Failed jobs" className="mt-4">
+        <p className="mb-3 text-supporting text-ink-subtle">
+          Real failures, retained on purpose (never auto-removed) so every one is reconcilable — never treated as proof the
+          underlying action failed on the provider side too (see each domain module&rsquo;s own interruption-safety design
+          for outreach sends / affiliate creation).
+        </p>
+        {detail.failedJobs.length === 0 ? (
+          <p className="text-supporting text-ink-faint">None.</p>
+        ) : (
+          <Table>
+            <Thead>
+              <Th>Lane</Th>
+              <Th>Job</Th>
+              <Th>Attempts</Th>
+              <Th>Reason</Th>
+              <Th>When</Th>
+              <Th>&nbsp;</Th>
+            </Thead>
+            <tbody>
+              {detail.failedJobs.map((j) => (
+                <Tr key={`${j.lane}-${j.id}`}>
+                  <Td>{j.lane}</Td>
+                  <Td>
+                    {j.name} ({j.id})
+                  </Td>
+                  <Td>{j.attemptsMade}</Td>
+                  <Td className="max-w-sm whitespace-normal">{j.failedReason}</Td>
+                  <Td className="whitespace-nowrap">{new Date(j.timestamp).toLocaleString()}</Td>
+                  <Td className="whitespace-nowrap">
+                    <RetryJobButton lane={j.lane} jobId={j.id} />
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </Card>
+    </div>
   );
 }

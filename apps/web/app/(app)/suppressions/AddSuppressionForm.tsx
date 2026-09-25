@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { FormField, TextInput } from "../../../components/ui/Form";
+import { Button } from "../../../components/ui/Button";
+import { Alert } from "../../../components/ui/Alert";
 
 /** Wave 2 Phase 7 (plan §12): adds a contact identity to the durable, workspace-scoped suppression/DNC list. */
 export function AddSuppressionForm() {
@@ -35,23 +38,21 @@ export function AddSuppressionForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 420 }}>
-      <div style={{ marginBottom: 10 }}>
-        <label htmlFor="identity" style={{ display: "block", marginBottom: 4 }}>
-          Contact identity (e.g. email)
-        </label>
-        <input id="identity" type="text" required value={identity} onChange={(e) => setIdentity(e.target.value)} style={{ width: "100%", padding: 8 }} />
-      </div>
-      <div style={{ marginBottom: 10 }}>
-        <label htmlFor="reason" style={{ display: "block", marginBottom: 4 }}>
-          Reason
-        </label>
-        <input id="reason" type="text" value={reason} onChange={(e) => setReason(e.target.value)} style={{ width: "100%", padding: 8 }} />
-      </div>
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
-      <button type="submit" disabled={submitting} style={{ padding: "8px 16px" }}>
+    <form onSubmit={handleSubmit} className="max-w-md">
+      <FormField label="Contact identity (e.g. email)" htmlFor="identity" required>
+        <TextInput id="identity" type="text" required value={identity} onChange={(e) => setIdentity(e.target.value)} />
+      </FormField>
+      <FormField label="Reason" htmlFor="reason">
+        <TextInput id="reason" type="text" value={reason} onChange={(e) => setReason(e.target.value)} />
+      </FormField>
+      {error && (
+        <div className="mb-4">
+          <Alert tone="danger">{error}</Alert>
+        </div>
+      )}
+      <Button type="submit" variant="primary" disabled={submitting}>
         {submitting ? "Adding…" : "Add to suppression list"}
-      </button>
+      </Button>
     </form>
   );
 }

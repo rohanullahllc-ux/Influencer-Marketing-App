@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "../../../components/ui/Button";
 
 /** Wave 6 (Job Reliability hardening): retries a real failed job in place via POST /api/ops/jobs/:lane/:jobId/retry. */
 export function RetryJobButton({ lane, jobId }: { lane: string; jobId: string }) {
@@ -23,11 +24,11 @@ export function RetryJobButton({ lane, jobId }: { lane: string; jobId: string })
   }
 
   return (
-    <span>
-      <button onClick={handleRetry} disabled={submitting} style={{ padding: "2px 10px", fontSize: 12 }}>
+    <div>
+      <Button variant="secondary" size="sm" onClick={handleRetry} disabled={submitting}>
         {submitting ? "Retrying…" : "Retry"}
-      </button>
-      {error && <div style={{ color: "crimson", fontSize: 11 }}>{error}</div>}
-    </span>
+      </Button>
+      {error && <div className="mt-1 text-meta text-danger-600">{error}</div>}
+    </div>
   );
 }

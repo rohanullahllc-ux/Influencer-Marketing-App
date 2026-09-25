@@ -2,6 +2,11 @@ import { listSuppressions } from "@rdv/domain";
 import { AuthorizationError } from "@rdv/lib";
 import { requireSession } from "../../../lib/session";
 import { AddSuppressionForm } from "./AddSuppressionForm";
+import { PageHeader } from "../../../components/ui/PageHeader";
+import { ButtonLink } from "../../../components/ui/Button";
+import { EmptyState } from "../../../components/ui/EmptyState";
+import { Card } from "../../../components/ui/Card";
+import { Table, Thead, Th, Tr, Td } from "../../../components/ui/Table";
 
 /** Wave 2 Phase 7 (plan §12): the workspace's durable suppression/DNC list. */
 export default async function SuppressionsPage() {
@@ -11,11 +16,11 @@ export default async function SuppressionsPage() {
   } catch (err) {
     if (err instanceof AuthorizationError) {
       return (
-        <main style={{ padding: 32 }}>
-          <p>
-            You must <a href="/login">sign in</a> to view this page.
-          </p>
-        </main>
+        <EmptyState
+          title="Sign in required"
+          description="You must sign in to view suppressions."
+          action={<ButtonLink href="/login" variant="primary">Sign in</ButtonLink>}
+        />
       );
     }
     throw err;
@@ -24,36 +29,36 @@ export default async function SuppressionsPage() {
   const suppressions = await listSuppressions({ workspaceId: actor.workspaceId, actorUserId: actor.userId });
 
   return (
-    <main style={{ padding: 32, maxWidth: 640 }}>
-      <h1>Suppressions</h1>
-      <p style={{ fontSize: 13, color: "#666", marginBottom: 16 }}>
-        Durable, workspace-scoped do-not-contact list. A suppressed identity always blocks outreach in the dry-run safety gate,
-        regardless of approval status. Entries cannot be removed from this screen.
-      </p>
+    <div>
+      <PageHeader
+        title="Suppressions"
+        description="Durable, workspace-scoped do-not-contact list. A suppressed identity always blocks outreach in the dry-run safety gate, regardless of approval status. Entries cannot be removed from this screen."
+      />
+
+      <Card title="Add a suppression" className="mb-4">
+        <AddSuppressionForm />
+      </Card>
+
       {suppressions.length === 0 ? (
-        <p style={{ color: "#666" }}>No suppressions yet.</p>
+        <EmptyState title="No suppressions yet" description="Contacts added to the do-not-contact list will appear here." />
       ) : (
-        <table cellPadding={8} style={{ borderCollapse: "collapse", width: "100%", marginBottom: 24 }}>
-          <thead>
-            <tr style={{ textAlign: "left", borderBottom: "2px solid #ddd" }}>
-              <th>Identity</th>
-              <th>Reason</th>
-              <th>Added</th>
-            </tr>
-          </thead>
+        <Table>
+          <Thead>
+            <Th>Identity</Th>
+            <Th>Reason</Th>
+            <Th>Added</Th>
+          </Thead>
           <tbody>
             {suppressions.map((s) => (
-              <tr key={s.id} style={{ borderBottom: "1px solid #eee" }}>
-                <td>{s.normalizedIdentity}</td>
-                <td>{s.reason ?? "—"}</td>
-                <td>{new Date(s.createdAt).toLocaleString()}</td>
-              </tr>
+              <Tr key={s.id}>
+                <Td className="font-medium text-ink">{s.normalizedIdentity}</Td>
+                <Td className="max-w-md whitespace-normal text-ink-subtle">{s.reason ?? "—"}</Td>
+                <Td className="text-ink-subtle">{new Date(s.createdAt).toLocaleString()}</Td>
+              </Tr>
             ))}
           </tbody>
-        </table>
+        </Table>
       )}
-      <h2>Add a suppression</h2>
-      <AddSuppressionForm />
-    </main>
+    </div>
   );
 }
