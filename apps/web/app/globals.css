@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  border-color: theme("colors.border.DEFAULT");
+}
+
+body {
+  @apply bg-surface-subtle text-ink text-body antialiased;
+}
+
+a {
+  @apply text-primary-600 hover:text-primary-700;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: theme("colors.border.strong");
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.focus-ring {
+  @apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-white;
+}
