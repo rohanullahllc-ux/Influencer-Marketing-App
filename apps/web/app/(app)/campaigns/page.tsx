@@ -1,8 +1,12 @@
 import { listCampaigns } from "@rdv/domain";
 import { AuthorizationError } from "@rdv/lib";
 import { requireSession } from "../../../lib/session";
+import { PageHeader } from "../../../components/ui/PageHeader";
+import { ButtonLink } from "../../../components/ui/Button";
+import { EmptyState } from "../../../components/ui/EmptyState";
+import { StatusBadge, toneForStatus } from "../../../components/ui/StatusBadge";
+import { Table, Thead, Th, Tr, Td } from "../../../components/ui/Table";
 
-/** Wave 2 Phase 4 (plan §9): campaign list, the entry point into Campaign + Templates. */
 export default async function CampaignsPage() {
   let actor;
   try {
@@ -10,11 +14,11 @@ export default async function CampaignsPage() {
   } catch (err) {
     if (err instanceof AuthorizationError) {
       return (
-        <main style={{ padding: 32 }}>
-          <p>
-            You must <a href="/login">sign in</a> to view this page.
-          </p>
-        </main>
+        <EmptyState
+          title="Sign in required"
+          description="You must sign in to view campaigns."
+          action={<ButtonLink href="/login" variant="primary">Sign in</ButtonLink>}
+        />
       );
     }
     throw err;
@@ -23,35 +27,48 @@ export default async function CampaignsPage() {
   const campaigns = await listCampaigns({ workspaceId: actor.workspaceId, actorUserId: actor.userId });
 
   return (
-    <main style={{ padding: 32, maxWidth: 720 }}>
-      <h1>Campaigns</h1>
-      <p style={{ marginBottom: 16 }}>
-        <a href="/campaigns/new">+ New campaign</a> · <a href="/templates">Manage templates</a>
-      </p>
+    <div>
+      <PageHeader
+        title="Campaigns"
+        description="Set up a campaign, shortlist creators, and run outreach end-to-end."
+        actions={
+          <>
+            <ButtonLink href="/templates" variant="secondary">Manage templates</ButtonLink>
+            <ButtonLink href="/campaigns/new" variant="primary">+ New campaign</ButtonLink>
+          </>
+        }
+      />
+
       {campaigns.length === 0 ? (
-        <p style={{ color: "#666" }}>No campaigns yet.</p>
+        <EmptyState
+          title="No campaigns yet"
+          description="Create your first campaign to start reaching out to creators."
+          action={<ButtonLink href="/campaigns/new" variant="primary">+ New campaign</ButtonLink>}
+        />
       ) : (
-        <table cellPadding={8} style={{ borderCollapse: "collapse", width: "100%" }}>
-          <thead>
-            <tr style={{ textAlign: "left", borderBottom: "2px solid #ddd" }}>
-              <th>Name</th>
-              <th>Status</th>
-              <th>Created</th>
-            </tr>
-          </thead>
+        <Table>
+          <Thead>
+            <Th>Name</Th>
+            <Th>Status</Th>
+            <Th>Created</Th>
+          </Thead>
           <tbody>
             {campaigns.map((c) => (
-              <tr key={c.id} style={{ borderBottom: "1px solid #eee" }}>
-                <td>
-                  <a href={`/campaigns/${c.id}`}>{c.name}</a>
-                </td>
-                <td>{c.status}</td>
-                <td>{new Date(c.createdAt).toLocaleString()}</td>
-              </tr>
+              <Tr key={c.id}>
+                <Td>
+                  <a href={`/campaigns/${c.id}`} className="font-medium text-primary-600 no-underline hover:text-primary-700 hover:underline">
+                    {c.name}
+                  </a>
+                </Td>
+                <Td>
+                  <StatusBadge label={c.status} tone={toneForStatus(c.status)} />
+                </Td>
+                <Td className="text-ink-subtle">{new Date(c.createdAt).toLocaleString()}</Td>
+              </Tr>
             ))}
           </tbody>
-        </table>
+        </Table>
       )}
-    </main>
+    </div>
   );
 }

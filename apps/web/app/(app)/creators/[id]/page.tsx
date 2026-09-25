@@ -177,7 +177,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
                               />
                             </Td>
                             <Td className="text-ink-subtle">{new Date(r.when).toLocaleString()}</Td>
-                            <Td>{r.detail}</Td>
+                            <Td className="max-w-md whitespace-normal">{r.detail}</Td>
                           </Tr>
                         ))}
                       </tbody>

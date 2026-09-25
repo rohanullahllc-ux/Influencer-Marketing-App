@@ -3,16 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Creator, CreatorQualification, CreatorMatch } from "@rdv/domain";
+import { Table, Thead, Th, Tr, Td } from "../../../../components/ui/Table";
+import { Button } from "../../../../components/ui/Button";
+import { Alert } from "../../../../components/ui/Alert";
+import { EmptyState } from "../../../../components/ui/EmptyState";
+import { StatusBadge } from "../../../../components/ui/StatusBadge";
 
 const POLL_INTERVAL_MS = 2000;
 
-/**
- * Wave 2 Phase 5 (plan §10): shows each shortlisted creator's current
- * qualification (deterministic pass/fail, with reasons) and current AI
- * match (score + explanation — a score is never shown without it). The
- * two are always displayed as separate, independent results — matching
- * is never used to override or substitute for qualification.
- */
 export function QualificationMatchingPanel({
   campaignId,
   shortlistedCreators,
@@ -93,61 +91,69 @@ export function QualificationMatchingPanel({
 
   const qualificationByCreator = new Map(initialQualifications.map((q) => [q.creatorId, q]));
   const matchByCreator = new Map(initialMatches.map((m) => [m.creatorId, m]));
+  const isMatchRunning = matchState && matchState !== "completed" && matchState !== "failed";
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: "flex", gap: 8 }}>
-        <button onClick={handleQualify} disabled={qualifying || shortlistedCreators.length === 0} style={{ padding: "8px 16px" }}>
+      <div className="mb-4 flex items-center gap-3">
+        <Button variant="primary" onClick={handleQualify} disabled={qualifying || shortlistedCreators.length === 0}>
           {qualifying ? "Qualifying…" : "Run Qualification"}
-        </button>
-        <button onClick={handleMatch} disabled={matching || shortlistedCreators.length === 0} style={{ padding: "8px 16px" }}>
+        </Button>
+        <Button variant="primary" onClick={handleMatch} disabled={matching || shortlistedCreators.length === 0}>
           {matching ? "Starting…" : "Run AI Matching"}
-        </button>
-        {matchState && matchState !== "completed" && matchState !== "failed" && (
-          <span style={{ fontSize: 13, color: "#666", alignSelf: "center" }}>Matching: {matchState}…</span>
+        </Button>
+        {isMatchRunning && (
+          <span className="inline-flex items-center gap-1.5 text-supporting text-ink-subtle">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-primary-500" />
+            Matching: {matchState}…
+          </span>
         )}
       </div>
-      {error && <p style={{ color: "crimson", fontSize: 13 }}>{error}</p>}
+      {error && (
+        <div className="mb-3">
+          <Alert tone="danger">{error}</Alert>
+        </div>
+      )}
       {shortlistedCreators.length === 0 ? (
-        <p style={{ color: "#666" }}>Shortlist a creator above before running qualification/matching.</p>
+        <EmptyState title="No creators shortlisted" description="Shortlist a creator in the Creators tab before running qualification/matching." />
       ) : (
-        <table cellPadding={8} style={{ borderCollapse: "collapse", width: "100%" }}>
-          <thead>
-            <tr style={{ textAlign: "left", borderBottom: "2px solid #ddd" }}>
-              <th>Creator</th>
-              <th>Qualification</th>
-              <th>Match score</th>
-              <th>Explanation</th>
-            </tr>
-          </thead>
+        <Table>
+          <Thead>
+            <Th>Creator</Th>
+            <Th>Qualification</Th>
+            <Th>Match score</Th>
+            <Th>Explanation</Th>
+          </Thead>
           <tbody>
             {shortlistedCreators.map((c) => {
               const q = qualificationByCreator.get(c.id);
               const m = matchByCreator.get(c.id);
               return (
-                <tr key={c.id} style={{ borderBottom: "1px solid #eee", verticalAlign: "top" }}>
-                  <td>{c.displayName ?? c.id}</td>
-                  <td>
+                <Tr key={c.id}>
+                  <Td className="align-top">{c.displayName ?? c.id}</Td>
+                  <Td className="align-top">
                     {q ? (
-                      <span style={{ color: q.passed ? "green" : "crimson" }}>
-                        {q.passed ? "PASS" : "FAIL"}
+                      <div>
+                        <StatusBadge label={q.passed ? "PASS" : "FAIL"} tone={q.passed ? "success" : "danger"} />
                         {!q.passed && (q.measuredValues as { reasons?: string[] } | null)?.reasons && (
-                          <div style={{ fontSize: 12, color: "#666" }}>
+                          <div className="mt-1 text-meta text-ink-faint">
                             {((q.measuredValues as { reasons?: string[] }).reasons ?? []).join("; ")}
                           </div>
                         )}
-                      </span>
+                      </div>
                     ) : (
-                      <span style={{ color: "#999" }}>not evaluated</span>
+                      <StatusBadge label="not evaluated" tone="neutral" />
                     )}
-                  </td>
-                  <td>{m ? Number(m.score).toFixed(2) : <span style={{ color: "#999" }}>—</span>}</td>
-                  <td style={{ fontSize: 13 }}>{m ? m.explanation : <span style={{ color: "#999" }}>—</span>}</td>
-                </tr>
+                  </Td>
+                  <Td className="align-top font-medium">{m ? Number(m.score).toFixed(2) : <span className="text-ink-faint">—</span>}</Td>
+                  <Td className="max-w-md whitespace-normal align-top text-supporting">
+                    {m ? m.explanation : <span className="text-ink-faint">—</span>}
+                  </Td>
+                </Tr>
               );
             })}
           </tbody>
-        </table>
+        </Table>
       )}
     </div>
   );

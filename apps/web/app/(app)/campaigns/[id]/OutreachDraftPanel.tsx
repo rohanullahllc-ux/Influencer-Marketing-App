@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Creator } from "@rdv/domain";
+import { Table, Thead, Th, Tr, Td } from "../../../../components/ui/Table";
+import { Button } from "../../../../components/ui/Button";
+import { StatusBadge } from "../../../../components/ui/StatusBadge";
+import { EmptyState } from "../../../../components/ui/EmptyState";
 
 const POLL_INTERVAL_MS = 2000;
 
@@ -14,12 +18,6 @@ interface RowState {
   error?: string;
 }
 
-/**
- * Wave 2 Phase 6 (plan §11): generates a personalized outreach draft for
- * one shortlisted creator at a time (async, polled), then submits it into
- * the Approval Queue. Never sends anything and never approves — approval
- * happens only on /approvals, by an Admin, explicitly.
- */
 export function OutreachDraftPanel({ campaignId, shortlistedCreators }: { campaignId: string; shortlistedCreators: Creator[] }) {
   const [rows, setRows] = useState<Record<string, RowState>>({});
   const timers = useRef<Record<string, ReturnType<typeof setInterval>>>({});
@@ -83,49 +81,58 @@ export function OutreachDraftPanel({ campaignId, shortlistedCreators }: { campai
   }
 
   if (shortlistedCreators.length === 0) {
-    return <p style={{ color: "#666" }}>Shortlist a creator above before generating outreach drafts.</p>;
+    return <EmptyState title="No creators shortlisted" description="Shortlist a creator in the Creators tab before generating outreach drafts." />;
   }
 
   return (
-    <table cellPadding={8} style={{ borderCollapse: "collapse", width: "100%" }}>
-      <thead>
-        <tr style={{ textAlign: "left", borderBottom: "2px solid #ddd" }}>
-          <th>Creator</th>
-          <th>Draft</th>
-          <th></th>
-        </tr>
-      </thead>
+    <Table>
+      <Thead>
+        <Th>Creator</Th>
+        <Th>Draft</Th>
+        <Th>Actions</Th>
+      </Thead>
       <tbody>
         {shortlistedCreators.map((c) => {
           const row = rows[c.id] ?? {};
           return (
-            <tr key={c.id} style={{ borderBottom: "1px solid #eee" }}>
-              <td>{c.displayName ?? c.id}</td>
-              <td style={{ fontSize: 13 }}>
-                {row.draftId && <span style={{ color: "green" }}>Draft ready{row.submitted ? " — submitted for approval" : ""}</span>}
-                {row.failedReason && <span style={{ color: "crimson" }}>Failed: {row.failedReason}</span>}
-                {row.state && !row.draftId && !row.failedReason && <span style={{ color: "#666" }}>{row.state}…</span>}
-                {row.error && <div style={{ color: "crimson" }}>{row.error}</div>}
-              </td>
-              <td>
-                <button onClick={() => handleGenerate(c.id)} style={{ padding: "6px 12px", marginRight: 8 }}>
-                  Generate draft
-                </button>
-                {row.draftId && !row.submitted && (
-                  <button onClick={() => handleSubmitForApproval(c.id, row.draftId!)} style={{ padding: "6px 12px" }}>
-                    Submit for approval
-                  </button>
+            <Tr key={c.id}>
+              <Td>{c.displayName ?? c.id}</Td>
+              <Td>
+                {row.draftId && (
+                  <div className="flex items-center gap-2">
+                    <StatusBadge label={row.submitted ? "submitted for approval" : "draft ready"} tone="success" />
+                  </div>
                 )}
-                {row.submitted && (
-                  <a href="/approvals" style={{ fontSize: 13 }}>
-                    View in Approval Queue
-                  </a>
+                {row.failedReason && <StatusBadge label={`Failed: ${row.failedReason}`} tone="danger" />}
+                {row.state && !row.draftId && !row.failedReason && (
+                  <span className="inline-flex items-center gap-1.5 text-supporting text-ink-subtle">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-primary-500" />
+                    {row.state}…
+                  </span>
                 )}
-              </td>
-            </tr>
+                {row.error && <div className="mt-1 text-supporting text-danger-600">{row.error}</div>}
+              </Td>
+              <Td>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="secondary" onClick={() => handleGenerate(c.id)}>
+                    Generate draft
+                  </Button>
+                  {row.draftId && !row.submitted && (
+                    <Button size="sm" variant="primary" onClick={() => handleSubmitForApproval(c.id, row.draftId!)}>
+                      Submit for approval
+                    </Button>
+                  )}
+                  {row.submitted && (
+                    <a href="/approvals" className="text-supporting text-primary-600 no-underline hover:underline">
+                      View in Approval Queue
+                    </a>
+                  )}
+                </div>
+              </Td>
+            </Tr>
           );
         })}
       </tbody>
-    </table>
+    </Table>
   );
 }

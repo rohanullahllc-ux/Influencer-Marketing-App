@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Creator } from "@rdv/domain";
+import { Table, Thead, Th, Tr, Td } from "../../../../components/ui/Table";
+import { Button } from "../../../../components/ui/Button";
+import { Alert } from "../../../../components/ui/Alert";
+import { StatusBadge } from "../../../../components/ui/StatusBadge";
 
 const POLL_INTERVAL_MS = 2000;
 
@@ -12,12 +16,6 @@ interface DryRunResultRow {
   blockReasons: string[] | null;
 }
 
-/**
- * Wave 2 Phase 7 (plan §12): triggers a dry-run evaluation and shows the
- * eligible/blocked table with exact per-row reasons. Zero outbound
- * network calls happen anywhere in this flow — no provider adapter
- * exists in this codebase to call.
- */
 export function DryRunPanel({ campaignId, shortlistedCreators }: { campaignId: string; shortlistedCreators: Creator[] }) {
   const [runId, setRunId] = useState<string | null>(null);
   const [state, setState] = useState<string | null>(null);
@@ -81,37 +79,53 @@ export function DryRunPanel({ campaignId, shortlistedCreators }: { campaignId: s
   }
 
   const byId = new Map(shortlistedCreators.map((c) => [c.id, c]));
+  const isRunning = state && state !== "completed" && state !== "failed";
 
   return (
     <div>
-      <button onClick={handleRun} disabled={submitting || shortlistedCreators.length === 0} style={{ padding: "8px 16px", marginBottom: 12 }}>
-        {submitting ? "Starting…" : "Run Dry Run"}
-      </button>
-      {state && state !== "completed" && state !== "failed" && (
-        <span style={{ marginLeft: 12, fontSize: 13, color: "#666" }}>Run {runId}: {state}…</span>
+      <div className="mb-3 flex items-center gap-3">
+        <Button variant="primary" onClick={handleRun} disabled={submitting || shortlistedCreators.length === 0}>
+          {submitting ? "Starting…" : "Run Dry Run"}
+        </Button>
+        {isRunning && (
+          <span className="inline-flex items-center gap-1.5 text-supporting text-ink-subtle">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-primary-500" />
+            Run {runId}: {state}…
+          </span>
+        )}
+      </div>
+      {error && (
+        <div className="mb-3">
+          <Alert tone="danger">{error}</Alert>
+        </div>
       )}
-      {error && <p style={{ color: "crimson", fontSize: 13 }}>{error}</p>}
-      {failedReason && <p style={{ color: "crimson", fontSize: 13 }}>Dry run failed: {failedReason}</p>}
+      {failedReason && (
+        <div className="mb-3">
+          <Alert tone="danger" title="Dry run failed">
+            {failedReason}
+          </Alert>
+        </div>
+      )}
 
       {results && (
-        <table cellPadding={8} style={{ borderCollapse: "collapse", width: "100%" }}>
-          <thead>
-            <tr style={{ textAlign: "left", borderBottom: "2px solid #ddd" }}>
-              <th>Creator</th>
-              <th>Eligible</th>
-              <th>Reasons</th>
-            </tr>
-          </thead>
+        <Table>
+          <Thead>
+            <Th>Creator</Th>
+            <Th>Eligibility</Th>
+            <Th>Reasons</Th>
+          </Thead>
           <tbody>
             {results.map((r) => (
-              <tr key={r.id} style={{ borderBottom: "1px solid #eee" }}>
-                <td>{byId.get(r.creatorId)?.displayName ?? r.creatorId}</td>
-                <td style={{ color: r.eligible ? "green" : "crimson", fontWeight: 600 }}>{r.eligible ? "ELIGIBLE" : "BLOCKED"}</td>
-                <td style={{ fontSize: 12, color: "#666" }}>{(r.blockReasons ?? []).join(", ") || "—"}</td>
-              </tr>
+              <Tr key={r.id}>
+                <Td>{byId.get(r.creatorId)?.displayName ?? r.creatorId}</Td>
+                <Td>
+                  <StatusBadge label={r.eligible ? "ELIGIBLE" : "BLOCKED"} tone={r.eligible ? "success" : "danger"} />
+                </Td>
+                <Td className="max-w-md whitespace-normal text-supporting text-ink-subtle">{(r.blockReasons ?? []).join(", ") || "—"}</Td>
+              </Tr>
             ))}
           </tbody>
-        </table>
+        </Table>
       )}
     </div>
   );

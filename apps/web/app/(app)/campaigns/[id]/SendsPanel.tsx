@@ -2,26 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Creator, OutreachSend } from "@rdv/domain";
+import { Table, Thead, Th, Tr, Td } from "../../../../components/ui/Table";
+import { StatusBadge, toneForStatus } from "../../../../components/ui/StatusBadge";
+import { Alert } from "../../../../components/ui/Alert";
+import { EmptyState } from "../../../../components/ui/EmptyState";
 
 const POLL_INTERVAL_MS = 2000;
 const NON_TERMINAL: OutreachSend["status"][] = ["scheduled", "sending"];
 
-const STATUS_COLOR: Record<string, string> = {
-  scheduled: "#666",
-  sending: "#b8860b",
-  sent: "green",
-  failed: "crimson",
-  unknown: "#b8860b",
-  blocked: "crimson",
-  cancelled: "#999",
-};
-
-/**
- * Wave 3: real send history/status for this campaign — approving a
- * message on /approvals and clicking "Schedule send" there is what
- * creates these rows; this panel is read-only status, polled while any
- * row is still in flight (scheduled/sending).
- */
 export function SendsPanel({ campaignId, shortlistedCreators }: { campaignId: string; shortlistedCreators: Creator[] }) {
   const [sends, setSends] = useState<OutreachSend[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,36 +40,51 @@ export function SendsPanel({ campaignId, shortlistedCreators }: { campaignId: st
 
   return (
     <div>
-      {error && <p style={{ color: "crimson", fontSize: 13 }}>{error}</p>}
+      {error && (
+        <div className="mb-3">
+          <Alert tone="danger">{error}</Alert>
+        </div>
+      )}
       {!sends || sends.length === 0 ? (
-        <p style={{ color: "#666" }}>
-          No sends yet. Approve a message on <a href="/approvals">/approvals</a> and use &quot;Schedule send&quot; there.
-        </p>
+        <EmptyState
+          title="No sends yet"
+          description={
+            <>
+              Approve a message on <a href="/approvals" className="text-primary-600 no-underline hover:underline">/approvals</a> and use
+              &quot;Schedule send&quot; there.
+            </>
+          }
+        />
       ) : (
-        <table cellPadding={8} style={{ borderCollapse: "collapse", width: "100%" }}>
-          <thead>
-            <tr style={{ textAlign: "left", borderBottom: "2px solid #ddd" }}>
-              <th>Creator</th>
-              <th>Step</th>
-              <th>Status</th>
-              <th>Detail</th>
-              <th>Provider message id</th>
-            </tr>
-          </thead>
+        <Table>
+          <Thead>
+            <Th>Creator</Th>
+            <Th>Step</Th>
+            <Th>Status</Th>
+            <Th>Detail</Th>
+            <Th>Provider message id</Th>
+          </Thead>
           <tbody>
             {sends.map((s) => (
-              <tr key={s.id} style={{ borderBottom: "1px solid #eee" }}>
-                <td>{byId.get(s.creatorId)?.displayName ?? s.creatorId}</td>
-                <td style={{ fontSize: 12 }}>{s.outreachStep}</td>
-                <td style={{ color: STATUS_COLOR[s.status] ?? "#333", fontWeight: 600 }}>{s.status.toUpperCase()}</td>
-                <td style={{ fontSize: 12, color: "#666" }}>{s.statusReason ?? "—"}</td>
-                <td style={{ fontSize: 12 }}>{s.providerMessageId ?? "—"}</td>
-              </tr>
+              <Tr key={s.id} className={s.status === "blocked" ? "bg-danger-50" : ""}>
+                <Td>{byId.get(s.creatorId)?.displayName ?? s.creatorId}</Td>
+                <Td className="text-meta text-ink-faint">{s.outreachStep}</Td>
+                <Td>
+                  <StatusBadge label={s.status === "blocked" ? "BLOCKED — suppressed" : s.status} tone={toneForStatus(s.status)} />
+                </Td>
+                <Td className="max-w-md whitespace-normal text-supporting text-ink-subtle">{s.statusReason ?? "—"}</Td>
+                <Td className="text-meta text-ink-faint">{s.providerMessageId ?? "—"}</Td>
+              </Tr>
             ))}
           </tbody>
-        </table>
+        </Table>
       )}
-      {anyInFlight && <p style={{ fontSize: 12, color: "#666", marginTop: 8 }}>Polling every 2s while any send is still in flight…</p>}
+      {anyInFlight && (
+        <p className="mt-2 inline-flex items-center gap-1.5 text-meta text-ink-faint">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary-500" />
+          Polling every 2s while any send is still in flight…
+        </p>
+      )}
     </div>
   );
 }
