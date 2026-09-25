@@ -2,6 +2,12 @@ import { getCredentialStatus } from "@rdv/auth";
 import { AuthorizationError } from "@rdv/lib";
 import { requireSession } from "../../../../lib/session";
 import { AddCredentialForm } from "./AddCredentialForm";
+import { PageHeader } from "../../../../components/ui/PageHeader";
+import { ButtonLink } from "../../../../components/ui/Button";
+import { EmptyState } from "../../../../components/ui/EmptyState";
+import { Card } from "../../../../components/ui/Card";
+import { StatusBadge } from "../../../../components/ui/StatusBadge";
+import { Table, Thead, Th, Tr, Td } from "../../../../components/ui/Table";
 
 /**
  * Wave 2 Phase 0 (plan §4B, §5): Owner/Admin screen to store the YouTube
@@ -16,60 +22,56 @@ export default async function IntegrationsPage() {
   } catch (err) {
     if (err instanceof AuthorizationError) {
       return (
-        <main style={{ padding: 32 }}>
-          <p>
-            You must <a href="/login">sign in</a> to view this page.
-          </p>
-        </main>
+        <EmptyState
+          title="Sign in required"
+          description="You must sign in to view Integrations."
+          action={<ButtonLink href="/login" variant="primary">Sign in</ButtonLink>}
+        />
       );
     }
     throw err;
   }
 
   if (actor.role !== "owner" && actor.role !== "admin") {
-    return (
-      <main style={{ padding: 32 }}>
-        <p>Only an Owner/Admin can manage integration credentials.</p>
-      </main>
-    );
+    return <EmptyState title="Restricted" description="Only an Owner/Admin can manage integration credentials." />;
   }
 
   const statuses = await getCredentialStatus({ workspaceId: actor.workspaceId, actorUserId: actor.userId });
 
   return (
-    <main style={{ padding: 32, maxWidth: 640 }}>
-      <h1>Integrations</h1>
-      <p style={{ color: "#666", fontSize: 14 }}>
-        Keys are encrypted before storage (AES-256-GCM) and never displayed again after entry.
-        YouTube discovery and AI-assisted steps (Phases 3, 5, 6) cannot run for real until a
-        working key is stored here.
-      </p>
+    <div>
+      <PageHeader
+        title="Integrations"
+        description="Keys are encrypted before storage (AES-256-GCM) and never displayed again after entry. YouTube discovery and AI-assisted steps cannot run for real until a working key is stored here."
+      />
 
-      <h2>Current status</h2>
-      <table cellPadding={8} style={{ borderCollapse: "collapse", width: "100%" }}>
-        <thead>
-          <tr style={{ textAlign: "left", borderBottom: "2px solid #ddd" }}>
-            <th>Provider</th>
-            <th>Status</th>
-            <th>Rotated at</th>
-          </tr>
-        </thead>
-        <tbody>
-          {["youtube", "anthropic"].map((provider) => {
-            const active = statuses.find((s) => s.provider === provider && s.status === "active");
-            return (
-              <tr key={provider} style={{ borderBottom: "1px solid #eee" }}>
-                <td>{provider}</td>
-                <td style={{ color: active ? "green" : "#999" }}>{active ? "Configured" : "Not configured"}</td>
-                <td>{active?.rotatedAt ? new Date(active.rotatedAt).toLocaleString() : "—"}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <Card title="Current status" className="mb-4">
+        <Table>
+          <Thead>
+            <Th>Provider</Th>
+            <Th>Status</Th>
+            <Th>Rotated at</Th>
+          </Thead>
+          <tbody>
+            {["youtube", "anthropic"].map((provider) => {
+              const active = statuses.find((s) => s.provider === provider && s.status === "active");
+              return (
+                <Tr key={provider}>
+                  <Td className="font-medium text-ink">{provider}</Td>
+                  <Td>
+                    <StatusBadge label={active ? "Configured" : "Not configured"} tone={active ? "success" : "neutral"} />
+                  </Td>
+                  <Td className="text-ink-subtle">{active?.rotatedAt ? new Date(active.rotatedAt).toLocaleString() : "—"}</Td>
+                </Tr>
+              );
+            })}
+          </tbody>
+        </Table>
+      </Card>
 
-      <h2>Add / rotate a key</h2>
-      <AddCredentialForm />
-    </main>
+      <Card title="Add / rotate a key">
+        <AddCredentialForm />
+      </Card>
+    </div>
   );
 }

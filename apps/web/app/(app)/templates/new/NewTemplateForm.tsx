@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { FormField, TextInput, TextArea } from "../../../../components/ui/Form";
+import { Button } from "../../../../components/ui/Button";
+import { Alert } from "../../../../components/ui/Alert";
 
 /** Wave 2 Phase 4 (plan §9): creates an outreach template (draft/active/archived), no A/B testing infra. */
 export function NewTemplateForm() {
@@ -46,35 +49,27 @@ export function NewTemplateForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 560 }}>
-      <div style={{ marginBottom: 10 }}>
-        <label htmlFor="name" style={{ display: "block", marginBottom: 4 }}>
-          Name
-        </label>
-        <input id="name" type="text" required value={name} onChange={(e) => setName(e.target.value)} style={{ width: "100%", padding: 8 }} />
-      </div>
-      <div style={{ marginBottom: 10 }}>
-        <label htmlFor="subject" style={{ display: "block", marginBottom: 4 }}>
-          Subject
-        </label>
-        <input id="subject" type="text" value={subject} onChange={(e) => setSubject(e.target.value)} style={{ width: "100%", padding: 8 }} />
-      </div>
-      <div style={{ marginBottom: 10 }}>
-        <label htmlFor="body" style={{ display: "block", marginBottom: 4 }}>
-          Body
-        </label>
-        <textarea id="body" value={body} onChange={(e) => setBody(e.target.value)} rows={6} style={{ width: "100%", padding: 8 }} />
-      </div>
-      <div style={{ marginBottom: 10 }}>
-        <label htmlFor="variables" style={{ display: "block", marginBottom: 4 }}>
-          Variables (comma-separated, e.g. creator_name, product_name)
-        </label>
-        <input id="variables" type="text" value={variables} onChange={(e) => setVariables(e.target.value)} style={{ width: "100%", padding: 8 }} />
-      </div>
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
-      <button type="submit" disabled={submitting} style={{ padding: "8px 16px" }}>
+    <form onSubmit={handleSubmit} className="max-w-xl">
+      <FormField label="Name" htmlFor="name" required>
+        <TextInput id="name" type="text" required value={name} onChange={(e) => setName(e.target.value)} />
+      </FormField>
+      <FormField label="Subject" htmlFor="subject">
+        <TextInput id="subject" type="text" value={subject} onChange={(e) => setSubject(e.target.value)} />
+      </FormField>
+      <FormField label="Body" htmlFor="body">
+        <TextArea id="body" value={body} onChange={(e) => setBody(e.target.value)} rows={6} />
+      </FormField>
+      <FormField label="Variables" htmlFor="variables" hint="Comma-separated, e.g. creator_name, product_name">
+        <TextInput id="variables" type="text" value={variables} onChange={(e) => setVariables(e.target.value)} />
+      </FormField>
+      {error && (
+        <div className="mb-4">
+          <Alert tone="danger">{error}</Alert>
+        </div>
+      )}
+      <Button type="submit" variant="primary" disabled={submitting}>
         {submitting ? "Creating…" : "Create template"}
-      </button>
+      </Button>
     </form>
   );
 }

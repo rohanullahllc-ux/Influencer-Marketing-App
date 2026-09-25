@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "../../../../components/ui/Button";
+import { Alert } from "../../../../components/ui/Alert";
 
 /** Client-side action: calls the setup-token API and displays the one-time link exactly once (plan §5). */
 export function IssueSetupTokenButton({ userId, email }: { userId: string; email: string }) {
@@ -27,19 +29,23 @@ export function IssueSetupTokenButton({ userId, email }: { userId: string; email
 
   if (link) {
     return (
-      <div style={{ fontSize: 13 }}>
-        <p style={{ margin: "4px 0" }}>Relay this link to {email} (shown once):</p>
-        <code style={{ wordBreak: "break-all" }}>{link}</code>
+      <div className="max-w-xs">
+        <p className="mb-1 text-meta text-ink-subtle">Relay this link to {email} (shown once):</p>
+        <code className="block break-all rounded-control bg-surface-muted px-2 py-1 text-meta text-ink">{link}</code>
       </div>
     );
   }
 
   return (
     <div>
-      <button onClick={handleClick} disabled={issuing} style={{ padding: "4px 10px" }}>
+      <Button variant="secondary" size="sm" onClick={handleClick} disabled={issuing}>
         {issuing ? "Issuing…" : "Issue setup link"}
-      </button>
-      {error && <p style={{ color: "crimson", fontSize: 13 }}>{error}</p>}
+      </Button>
+      {error && (
+        <div className="mt-2 max-w-xs">
+          <Alert tone="danger">{error}</Alert>
+        </div>
+      )}
     </div>
   );
 }

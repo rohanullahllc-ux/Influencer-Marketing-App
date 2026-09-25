@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { OutreachTemplate } from "@rdv/domain";
+import { FormField, TextInput, TextArea } from "../../../../components/ui/Form";
+import { Button } from "../../../../components/ui/Button";
+import { Alert } from "../../../../components/ui/Alert";
+
+const selectClasses =
+  "w-full rounded-control border border-border-strong bg-white px-3 py-2 text-body text-ink focus-visible:focus-ring sm:w-48";
 
 /** Wave 2 Phase 4 (plan §9): edits a template's content/status. Mutable — not a version-history system. */
 export function TemplateEditor({ template }: { template: OutreachTemplate }) {
@@ -36,44 +42,36 @@ export function TemplateEditor({ template }: { template: OutreachTemplate }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 560 }}>
-      <div style={{ marginBottom: 10 }}>
-        <label htmlFor="name" style={{ display: "block", marginBottom: 4 }}>
-          Name
-        </label>
-        <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} style={{ width: "100%", padding: 8 }} />
-      </div>
-      <div style={{ marginBottom: 10 }}>
-        <label htmlFor="subject" style={{ display: "block", marginBottom: 4 }}>
-          Subject
-        </label>
-        <input id="subject" type="text" value={subject} onChange={(e) => setSubject(e.target.value)} style={{ width: "100%", padding: 8 }} />
-      </div>
-      <div style={{ marginBottom: 10 }}>
-        <label htmlFor="body" style={{ display: "block", marginBottom: 4 }}>
-          Body
-        </label>
-        <textarea id="body" value={body} onChange={(e) => setBody(e.target.value)} rows={6} style={{ width: "100%", padding: 8 }} />
-      </div>
-      <div style={{ marginBottom: 10 }}>
-        <label htmlFor="status" style={{ display: "block", marginBottom: 4 }}>
-          Status
-        </label>
+    <form onSubmit={handleSubmit} className="max-w-xl">
+      <FormField label="Name" htmlFor="name">
+        <TextInput id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} />
+      </FormField>
+      <FormField label="Subject" htmlFor="subject">
+        <TextInput id="subject" type="text" value={subject} onChange={(e) => setSubject(e.target.value)} />
+      </FormField>
+      <FormField label="Body" htmlFor="body">
+        <TextArea id="body" value={body} onChange={(e) => setBody(e.target.value)} rows={6} />
+      </FormField>
+      <FormField label="Status" htmlFor="status">
         <select
           id="status"
           value={status}
           onChange={(e) => setStatus(e.target.value as typeof status)}
-          style={{ padding: 8 }}
+          className={selectClasses}
         >
           <option value="draft">draft</option>
           <option value="active">active</option>
           <option value="archived">archived</option>
         </select>
-      </div>
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
-      <button type="submit" disabled={submitting} style={{ padding: "8px 16px" }}>
+      </FormField>
+      {error && (
+        <div className="mb-4">
+          <Alert tone="danger">{error}</Alert>
+        </div>
+      )}
+      <Button type="submit" variant="primary" disabled={submitting}>
         {submitting ? "Saving…" : "Save"}
-      </button>
+      </Button>
     </form>
   );
 }

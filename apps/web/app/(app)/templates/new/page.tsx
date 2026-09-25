@@ -1,6 +1,10 @@
 import { AuthorizationError } from "@rdv/lib";
 import { requireSession } from "../../../../lib/session";
 import { NewTemplateForm } from "./NewTemplateForm";
+import { PageHeader } from "../../../../components/ui/PageHeader";
+import { ButtonLink } from "../../../../components/ui/Button";
+import { EmptyState } from "../../../../components/ui/EmptyState";
+import { Card } from "../../../../components/ui/Card";
 
 export default async function NewTemplatePage() {
   try {
@@ -8,20 +12,22 @@ export default async function NewTemplatePage() {
   } catch (err) {
     if (err instanceof AuthorizationError) {
       return (
-        <main style={{ padding: 32 }}>
-          <p>
-            You must <a href="/login">sign in</a> to view this page.
-          </p>
-        </main>
+        <EmptyState
+          title="Sign in required"
+          description="You must sign in to create a template."
+          action={<ButtonLink href="/login" variant="primary">Sign in</ButtonLink>}
+        />
       );
     }
     throw err;
   }
 
   return (
-    <main style={{ padding: 32 }}>
-      <h1>New template</h1>
-      <NewTemplateForm />
-    </main>
+    <div>
+      <PageHeader title="New template" breadcrumbs={[{ label: "Templates", href: "/templates" }, { label: "New" }]} />
+      <Card>
+        <NewTemplateForm />
+      </Card>
+    </div>
   );
 }

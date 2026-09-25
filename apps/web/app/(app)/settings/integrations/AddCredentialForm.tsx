@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { FormField, TextInput } from "../../../../components/ui/Form";
+import { Button } from "../../../../components/ui/Button";
+import { Alert } from "../../../../components/ui/Alert";
+
+const selectClasses =
+  "w-full rounded-control border border-border-strong bg-white px-3 py-2 text-body text-ink focus-visible:focus-ring";
 
 export function AddCredentialForm() {
   const router = useRouter();
@@ -33,38 +39,24 @@ export function AddCredentialForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 400 }}>
-      <div style={{ marginBottom: 12 }}>
-        <label htmlFor="provider" style={{ display: "block", marginBottom: 4 }}>
-          Provider
-        </label>
-        <select
-          id="provider"
-          value={provider}
-          onChange={(e) => setProvider(e.target.value)}
-          style={{ width: "100%", padding: 8 }}
-        >
+    <form onSubmit={handleSubmit} className="max-w-md">
+      <FormField label="Provider" htmlFor="provider">
+        <select id="provider" value={provider} onChange={(e) => setProvider(e.target.value)} className={selectClasses}>
           <option value="youtube">YouTube Data API</option>
           <option value="anthropic">Anthropic API</option>
         </select>
-      </div>
-      <div style={{ marginBottom: 12 }}>
-        <label htmlFor="apiKey" style={{ display: "block", marginBottom: 4 }}>
-          API key
-        </label>
-        <input
-          id="apiKey"
-          type="password"
-          required
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
-          style={{ width: "100%", padding: 8 }}
-        />
-      </div>
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
-      <button type="submit" disabled={submitting} style={{ padding: "8px 16px" }}>
+      </FormField>
+      <FormField label="API key" htmlFor="apiKey" required>
+        <TextInput id="apiKey" type="password" required value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
+      </FormField>
+      {error && (
+        <div className="mb-4">
+          <Alert tone="danger">{error}</Alert>
+        </div>
+      )}
+      <Button type="submit" variant="primary" disabled={submitting}>
         {submitting ? "Saving…" : "Save key"}
-      </button>
+      </Button>
     </form>
   );
 }

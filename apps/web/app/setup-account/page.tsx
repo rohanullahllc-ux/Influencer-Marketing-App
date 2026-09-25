@@ -2,6 +2,10 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { Card } from "../../components/ui/Card";
+import { FormField, TextInput } from "../../components/ui/Form";
+import { Button } from "../../components/ui/Button";
+import { Alert } from "../../components/ui/Alert";
 
 /**
  * Wave 2 Phase 0 (plan §5): consumes a one-time setup token issued by an
@@ -59,67 +63,62 @@ function SetupAccountForm() {
 
   if (done) {
     return (
-      <main style={{ padding: 32, maxWidth: 400 }}>
-        <h1>Account ready</h1>
-        <p>Your password is set. You can now sign in.</p>
-        <button onClick={() => router.push("/login")} style={{ padding: "8px 16px" }}>
-          Go to sign in
-        </button>
-      </main>
+      <div className="flex min-h-screen items-center justify-center bg-surface-subtle px-4">
+        <div className="w-full max-w-sm">
+          <h1 className="mb-6 text-center text-page-title text-ink">RDV Outreach OS</h1>
+          <Card title="Account ready">
+            <p className="mb-4 text-body text-ink-subtle">Your password is set. You can now sign in.</p>
+            <Button variant="primary" className="w-full" onClick={() => router.push("/login")}>
+              Go to sign in
+            </Button>
+          </Card>
+        </div>
+      </div>
     );
   }
 
   return (
-    <main style={{ padding: 32, maxWidth: 400 }}>
-      <h1>Set up your account</h1>
-      <p style={{ color: "#666", fontSize: 14 }}>
-        Paste the one-time setup link/token your Owner or Admin gave you, then choose a password.
-      </p>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 12 }}>
-          <label htmlFor="token" style={{ display: "block", marginBottom: 4 }}>
-            Setup token
-          </label>
-          <input
-            id="token"
-            required
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            style={{ width: "100%", padding: 8 }}
-          />
-        </div>
-        <div style={{ marginBottom: 12 }}>
-          <label htmlFor="password" style={{ display: "block", marginBottom: 4 }}>
-            New password (min. 8 characters)
-          </label>
-          <input
-            id="password"
-            type="password"
-            required
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{ width: "100%", padding: 8 }}
-          />
-        </div>
-        <div style={{ marginBottom: 12 }}>
-          <label htmlFor="confirm" style={{ display: "block", marginBottom: 4 }}>
-            Confirm password
-          </label>
-          <input
-            id="confirm"
-            type="password"
-            required
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            style={{ width: "100%", padding: 8 }}
-          />
-        </div>
-        {error && <p style={{ color: "crimson" }}>{error}</p>}
-        <button type="submit" disabled={submitting} style={{ padding: "8px 16px" }}>
-          {submitting ? "Setting up…" : "Set password"}
-        </button>
-      </form>
-    </main>
+    <div className="flex min-h-screen items-center justify-center bg-surface-subtle px-4">
+      <div className="w-full max-w-sm">
+        <h1 className="mb-6 text-center text-page-title text-ink">RDV Outreach OS</h1>
+        <Card title="Set up your account">
+          <p className="mb-4 text-supporting text-ink-subtle">
+            Paste the one-time setup link/token your Owner or Admin gave you, then choose a password.
+          </p>
+          <form onSubmit={handleSubmit}>
+            <FormField label="Setup token" htmlFor="token" required>
+              <TextInput id="token" required value={token} onChange={(e) => setToken(e.target.value)} />
+            </FormField>
+            <FormField label="New password" htmlFor="password" hint="Minimum 8 characters" required>
+              <TextInput
+                id="password"
+                type="password"
+                required
+                minLength={8}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </FormField>
+            <FormField label="Confirm password" htmlFor="confirm" required>
+              <TextInput
+                id="confirm"
+                type="password"
+                required
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+              />
+            </FormField>
+            {error && (
+              <div className="mb-4">
+                <Alert tone="danger">{error}</Alert>
+              </div>
+            )}
+            <Button type="submit" variant="primary" disabled={submitting} className="w-full">
+              {submitting ? "Setting up…" : "Set password"}
+            </Button>
+          </form>
+        </Card>
+      </div>
+    </div>
   );
 }
