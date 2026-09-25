@@ -1,3 +1,4 @@
+import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata = {
@@ -8,7 +9,7 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body style={{ fontFamily: "system-ui, sans-serif", margin: 0 }}>
+      <body className="font-sans">
         <Providers>{children}</Providers>
       </body>
     </html>

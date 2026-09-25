@@ -3,11 +3,15 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { Card } from "../../components/ui/Card";
+import { FormField, TextInput } from "../../components/ui/Form";
+import { Button } from "../../components/ui/Button";
+import { Alert } from "../../components/ui/Alert";
 
 /**
- * Wave 2 Phase 0 (plan §5, §8): email+password sign-in. Plain inline
- * styles, matching the Wave 1 convention — Tailwind/shared UI primitives
- * arrive in Phase 1 per the plan.
+ * Wave 2 Phase 0 (plan §5, §8): email+password sign-in. Outside the
+ * authenticated app shell by design — this is a pre-auth screen — but
+ * styled with the same design tokens/components for visual consistency.
  */
 export default function LoginPage() {
   const router = useRouter();
@@ -32,44 +36,41 @@ export default function LoginPage() {
   }
 
   return (
-    <main style={{ padding: 32, maxWidth: 400 }}>
-      <h1>Sign in</h1>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 12 }}>
-          <label htmlFor="email" style={{ display: "block", marginBottom: 4 }}>
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{ width: "100%", padding: 8 }}
-          />
-        </div>
-        <div style={{ marginBottom: 12 }}>
-          <label htmlFor="password" style={{ display: "block", marginBottom: 4 }}>
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{ width: "100%", padding: 8 }}
-          />
-        </div>
-        {error && <p style={{ color: "crimson" }}>{error}</p>}
-        <button type="submit" disabled={submitting} style={{ padding: "8px 16px" }}>
-          {submitting ? "Signing in…" : "Sign in"}
-        </button>
-      </form>
-      <p style={{ color: "#666", fontSize: 14, marginTop: 16 }}>
-        New to a workspace? You need a one-time setup link from an Owner/Admin — see{" "}
-        <a href="/setup-account">/setup-account</a>.
-      </p>
-    </main>
+    <div className="flex min-h-screen items-center justify-center bg-surface-subtle px-4">
+      <div className="w-full max-w-sm">
+        <h1 className="mb-6 text-center text-page-title text-ink">RDV Outreach OS</h1>
+        <Card title="Sign in">
+          <form onSubmit={handleSubmit}>
+            <FormField label="Email" htmlFor="email" required>
+              <TextInput id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            </FormField>
+            <FormField label="Password" htmlFor="password" required>
+              <TextInput
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </FormField>
+            {error && (
+              <div className="mb-4">
+                <Alert tone="danger">{error}</Alert>
+              </div>
+            )}
+            <Button type="submit" variant="primary" disabled={submitting} className="w-full">
+              {submitting ? "Signing in…" : "Sign in"}
+            </Button>
+          </form>
+          <p className="mt-4 text-meta text-ink-faint">
+            New to a workspace? You need a one-time setup link from an Owner/Admin — see{" "}
+            <a href="/setup-account" className="text-primary-600 no-underline hover:underline">
+              /setup-account
+            </a>
+            .
+          </p>
+        </Card>
+      </div>
+    </div>
   );
 }
