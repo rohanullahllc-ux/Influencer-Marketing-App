@@ -32,7 +32,7 @@ import "./operations/draftReplyResponse.js";
 // action (see the operation's own doc comment).
 import "./operations/summarizeCreatorConversation.js";
 
-export { getWorkspaceAnthropicClient } from "./client.js";
+export { getWorkspaceDeepSeekClient, runDeepSeekJsonCompletion } from "./client.js";
 export type { AnalyzeProductInput, AnalyzeProductOutput } from "./operations/analyzeProduct.js";
 export type { ExplainCreatorMatchInput, ExplainCreatorMatchOutput } from "./operations/explainCreatorMatch.js";
 export type { PersonalizeOutreachInput, PersonalizeOutreachOutput } from "./operations/personalizeOutreach.js";

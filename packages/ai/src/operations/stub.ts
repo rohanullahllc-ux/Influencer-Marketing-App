@@ -4,7 +4,7 @@ import { registerAiOperation } from "../orchestrator.js";
  * Wave 1 Foundation stub operation. Exists only to prove the orchestrator
  * contract (registration, invocation, provenance tagging, restriction
  * enforcement) end-to-end before any real product AI operation exists.
- * Deliberately has no network dependency (no Anthropic API key is
+ * Deliberately has no network dependency (no DeepSeek API key is
  * configured in this build environment) — the real operations that
  * replace/join this one (analyze product, classify creator relevance,
  * generate match explanation, generate personalization, classify reply,

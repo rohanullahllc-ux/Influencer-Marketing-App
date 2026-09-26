@@ -21,11 +21,11 @@ describe("Workspace-scoped integration credentials (Wave 2 Phase 0)", () => {
   it("status listing never exposes the encrypted payload fields", async () => {
     const ws = await createWorkspaceWithOwner({ workspaceName: "Cred WS 2", ownerEmail: "owner2@cred.local" });
     const owner = await getUserByEmail("owner2@cred.local");
-    await storeCredential({ workspaceId: ws.id, actorUserId: owner.id, provider: "anthropic", apiKey: "anthropic-secret-456" });
+    await storeCredential({ workspaceId: ws.id, actorUserId: owner.id, provider: "deepseek", apiKey: "deepseek-secret-456" });
 
     const statuses = await getCredentialStatus({ workspaceId: ws.id, actorUserId: owner.id });
     expect(statuses).toHaveLength(1);
-    expect(statuses[0]?.provider).toBe("anthropic");
+    expect(statuses[0]?.provider).toBe("deepseek");
     expect(statuses[0]?.status).toBe("active");
     expect(statuses[0]).not.toHaveProperty("encryptedCiphertext");
     expect(statuses[0]).not.toHaveProperty("apiKey");
@@ -71,7 +71,7 @@ describe("Workspace-scoped integration credentials (Wave 2 Phase 0)", () => {
 
   it("getDecryptedCredential returns null when no credential has been stored for a provider", async () => {
     const ws = await createWorkspaceWithOwner({ workspaceName: "Cred WS 6", ownerEmail: "owner6@cred.local" });
-    const decrypted = await getDecryptedCredential({ workspaceId: ws.id, provider: "anthropic" });
+    const decrypted = await getDecryptedCredential({ workspaceId: ws.id, provider: "deepseek" });
     expect(decrypted).toBeNull();
   });
 });

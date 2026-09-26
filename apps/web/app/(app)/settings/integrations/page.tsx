@@ -12,7 +12,7 @@ import { Table, Thead, Th, Tr, Td } from "../../../../components/ui/Table";
 
 /**
  * Wave 2 Phase 0 (plan §4B, §5): Owner/Admin screen to store the YouTube
- * and Anthropic API keys Phase 3/5/6 will need. The key itself is never
+ * and DeepSeek API keys Phase 3/5/6 will need. The key itself is never
  * rendered back — only provider/status/rotatedAt, exactly what
  * `getCredentialStatus` returns.
  */
@@ -52,7 +52,7 @@ export default async function IntegrationsPage() {
       <Card title="Mock AI mode" className="mb-4">
         <p className="mb-3 text-supporting text-ink-subtle">
           Exercise the full AI-assisted workflow — product intelligence, creator matching, outreach drafts, reply
-          classification — without a real Anthropic key or any API cost. Every result is generated locally and
+          classification — without a real DeepSeek key or any API cost. Every result is generated locally and
           clearly labeled <span className="font-medium text-ink">[MOCK]</span>, never mistaken for real AI output.
           This never affects real message sending, which stays behind its own separate approval and safety gate
           regardless of this setting.
@@ -71,7 +71,7 @@ export default async function IntegrationsPage() {
             <Th>Rotated at</Th>
           </Thead>
           <tbody>
-            {["youtube", "anthropic"].map((provider) => {
+            {["youtube", "deepseek"].map((provider) => {
               const active = statuses.find((s) => s.provider === provider && s.status === "active");
               return (
                 <Tr key={provider}>

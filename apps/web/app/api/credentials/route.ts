@@ -6,7 +6,7 @@ import { errorResponse } from "../../../lib/apiError";
 
 export const dynamic = "force-dynamic";
 
-const VALID_PROVIDERS: CredentialProvider[] = ["youtube", "outreach_provider", "whop", "anthropic"];
+const VALID_PROVIDERS: CredentialProvider[] = ["youtube", "outreach_provider", "whop", "deepseek"];
 
 /** Owner/Admin-only. Neither method ever returns or accepts a raw key on GET, and POST's key never persists in plaintext (plan §4B, §5). */
 export async function GET() {

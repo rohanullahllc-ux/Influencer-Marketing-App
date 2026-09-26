@@ -1,9 +1,8 @@
 import { z } from "zod";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { ValidationError } from "@rdv/lib";
 import { isAiMockModeEnabled } from "@rdv/auth";
 import { registerAiOperation } from "../orchestrator.js";
-import { getWorkspaceAnthropicClient } from "../client.js";
+import { runDeepSeekJsonCompletion } from "../client.js";
 import { mockDraftReplyResponse } from "../mock.js";
 
 /**
@@ -31,7 +30,7 @@ export interface DraftReplyResponseInput {
   classification: "interested" | "needs_human_review";
 }
 
-const SYSTEM_PROMPT = `You are drafting a suggested follow-up email reply on behalf of a founder running influencer partnership outreach. Given the original outreach message and the creator's reply, draft a warm, concise, professional follow-up that moves the conversation forward appropriately for the given classification (if "interested", move toward next steps; if "needs_human_review", ask a clarifying question or acknowledge and note a human will follow up with specifics). Return strict JSON with subject and body. Never invent commitments, rates, dates, or facts not already present in the conversation. This draft will always be reviewed and edited by a human before anything is sent -- write it as a strong starting point, not a final answer.`;
+const SYSTEM_PROMPT = `You are drafting a suggested follow-up email reply on behalf of a founder running influencer partnership outreach. Given the original outreach message and the creator's reply, draft a warm, concise, professional follow-up that moves the conversation forward appropriately for the given classification (if "interested", move toward next steps; if "needs_human_review", ask a clarifying question or acknowledge and note a human will follow up with specifics). Return strict JSON with subject and body. Never invent commitments, rates, dates, or facts not already present in the conversation. This draft will always be reviewed and edited by a human before anything is sent -- write it as a strong starting point, not a final answer. Respond with only the JSON object, no other text.`;
 
 registerAiOperation<DraftReplyResponseInput, DraftReplyResponseOutput>("draft_reply_response", async (input) => {
   if (!input.replyBody || input.replyBody.trim().length === 0) {
@@ -42,32 +41,20 @@ registerAiOperation<DraftReplyResponseInput, DraftReplyResponseOutput>("draft_re
     return mockDraftReplyResponse(input);
   }
 
-  const client = await getWorkspaceAnthropicClient(input.workspaceId);
+  const user = [
+    `Creator name: ${input.creatorName ?? "(unknown)"}`,
+    `Original outreach subject: ${input.originalSubject ?? "(unknown)"}`,
+    `Original outreach body: ${input.originalBody ?? "(unknown)"}`,
+    `Creator's reply: ${input.replyBody}`,
+    `Classification: ${input.classification}`,
+  ].join("\n\n");
 
-  const response = await client.messages.parse({
-    model: "claude-opus-5",
-    max_tokens: 1024,
+  return runDeepSeekJsonCompletion({
+    workspaceId: input.workspaceId,
+    operationName: "draft_reply_response",
     system: SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: [
-          `Creator name: ${input.creatorName ?? "(unknown)"}`,
-          `Original outreach subject: ${input.originalSubject ?? "(unknown)"}`,
-          `Original outreach body: ${input.originalBody ?? "(unknown)"}`,
-          `Creator's reply: ${input.replyBody}`,
-          `Classification: ${input.classification}`,
-        ].join("\n\n"),
-      },
-    ],
-    output_config: { format: zodOutputFormat(DraftReplyResponseOutputSchema) },
+    user,
+    schema: DraftReplyResponseOutputSchema,
+    maxTokens: 1024,
   });
-
-  if (!response.parsed_output) {
-    throw new ValidationError(
-      "draft_reply_response: Claude's response did not match the required output schema — failing rather than partially saving"
-    );
-  }
-
-  return response.parsed_output;
 });

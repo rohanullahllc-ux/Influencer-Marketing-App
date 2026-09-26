@@ -7,9 +7,9 @@ import { resetDb } from "./helpers.js";
  * Wave 2 Phase 2 (plan §7, §18): the `analyze_product` AI operation's
  * contract — registered on import, passes the Wave 1 hard-restriction
  * check, and correctly refuses to run (loudly, not silently) when no
- * Anthropic credential is configured for the workspace. This exercises
+ * DeepSeek credential is configured for the workspace. This exercises
  * the real credential-lookup path against real local Postgres — no
- * network call to Anthropic is made or mocked, since none is reachable
+ * network call to DeepSeek is made or mocked, since none is reachable
  * in this environment without a real key (see Phase 0's credential
  * design: the code path is fully implemented whether or not a key
  * exists yet).
@@ -27,7 +27,7 @@ describe("AI Orchestration — analyze_product (Wave 2 Phase 2)", () => {
     expect(() => assertAllowedAiOperationName("analyze_product")).not.toThrow();
   });
 
-  it("throws a clear, actionable error when the workspace has no Anthropic key configured", async () => {
+  it("throws a clear, actionable error when the workspace has no DeepSeek key configured", async () => {
     const ws = await createWorkspaceWithOwner({ workspaceName: "AI WS", ownerEmail: "ai-owner@test.local" });
 
     await expect(
@@ -36,7 +36,7 @@ describe("AI Orchestration — analyze_product (Wave 2 Phase 2)", () => {
         productName: "Widget Pro",
         productDescription: "A widget.",
       })
-    ).rejects.toThrow(/No Anthropic API key configured/);
+    ).rejects.toThrow(/No DeepSeek API key configured/);
   });
 
   it("rejects a missing productName before ever reaching the credential lookup", async () => {

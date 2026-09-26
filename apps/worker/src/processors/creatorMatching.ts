@@ -15,7 +15,7 @@ import { registerJobProcessor } from "../registry.js";
  * Wave 2 Phase 5 (plan §10): the `ai_explain_match` job — runs the
  * explain_creator_match AI operation for every shortlisted creator on a
  * campaign and persists an append-only creator_matches row per creator.
- * Fails loudly on any error (including "no Anthropic key configured"),
+ * Fails loudly on any error (including "no DeepSeek key configured"),
  * never silently skipping a creator. Reads everything through @rdv/domain
  * functions, never @rdv/db's schema directly — same layering as
  * analyzeProduct.ts (Phase 2) and creatorDiscovery.ts (Phase 3).

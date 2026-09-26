@@ -44,7 +44,7 @@ export const credentialProviderEnum = pgEnum("credential_provider", [
   "youtube",
   "outreach_provider",
   "whop",
-  "anthropic",
+  "deepseek",
 ]);
 export const credentialStatusEnum = pgEnum("credential_status", ["active", "revoked", "expired"]);
 
@@ -63,7 +63,7 @@ export const workspaces = pgTable("workspaces", {
   defaultTimezone: text("default_timezone"),
   // Mock AI provider (opt-in): when true, packages/ai's operations return
   // clearly-labeled placeholder output instead of calling the real
-  // Anthropic API — lets a workspace exercise the full AI-assisted
+  // DeepSeek API — lets a workspace exercise the full AI-assisted
   // workflow with no key and no API cost. Explicit, human-set toggle
   // only — never implied by the mere absence of a credential (a missing
   // key still throws, exactly as before, unless this is turned on).

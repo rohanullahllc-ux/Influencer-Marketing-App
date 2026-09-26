@@ -16,7 +16,7 @@ export interface CredentialStatus {
 
 /**
  * Wave 2 Phase 0 (plan §4B, §5): stores a workspace-scoped third-party API
- * key (YouTube, Anthropic, ...), reusing Wave 1's `integration_credentials`
+ * key (YouTube, DeepSeek, ...), reusing Wave 1's `integration_credentials`
  * table and `encryptSecret`/`decryptSecret` exactly as built — no schema
  * change. Plaintext is encrypted before this function's own caller (the
  * API route) ever constructs a DB statement; it is never logged (pino
@@ -110,7 +110,7 @@ export async function getCredentialStatus(params: {
 
 /**
  * Internal reader used by background jobs (YouTube discovery) and
- * `packages/ai`'s Anthropic client — never exposed via an API route.
+ * `packages/ai`'s DeepSeek client — never exposed via an API route.
  * Callers already operate within an established workspace context (a job's
  * `workspaceId`); this intentionally has no `requireRole` check of its own
  * since that check already happened when the human triggered the

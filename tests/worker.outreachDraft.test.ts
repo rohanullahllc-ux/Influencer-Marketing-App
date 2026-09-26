@@ -14,7 +14,7 @@ import "../apps/worker/src/processors/outreachDraft.js";
  * Wave 2 Phase 6 (plan §11): the full real pipeline (queue -> worker ->
  * registry -> @rdv/domain -> @rdv/ai) for `ai_personalize_outreach`, run
  * through a real BullMQ worker against real local Redis + Postgres. No
- * Anthropic key is configured in this environment, so the job is
+ * DeepSeek key is configured in this environment, so the job is
  * expected to fail loudly with a clear reason.
  */
 describe("Worker — ai_personalize_outreach (Wave 2 Phase 6)", () => {
@@ -23,7 +23,7 @@ describe("Worker — ai_personalize_outreach (Wave 2 Phase 6)", () => {
     await closeRedisConnection();
   });
 
-  it("runs the real registered handler end-to-end and fails loudly without a configured Anthropic key", async () => {
+  it("runs the real registered handler end-to-end and fails loudly without a configured DeepSeek key", async () => {
     await resetDb();
     const ws = await createWorkspaceWithOwner({ workspaceName: "Worker Draft WS", ownerEmail: "worker-draft-owner@test.local" });
     const ownerId = (await getUserByEmail("worker-draft-owner@test.local")).id;
@@ -57,12 +57,12 @@ describe("Worker — ai_personalize_outreach (Wave 2 Phase 6)", () => {
           if (failedJob?.id === job.id) resolve(err);
         });
         worker.on("completed", (completedJob) => {
-          if (completedJob.id === job.id) reject(new Error("job unexpectedly completed with no Anthropic key configured"));
+          if (completedJob.id === job.id) reject(new Error("job unexpectedly completed with no DeepSeek key configured"));
         });
         setTimeout(() => reject(new Error("timed out waiting for job failure")), 8000);
       });
 
-      expect((failure as Error).message).toMatch(/No Anthropic API key configured/);
+      expect((failure as Error).message).toMatch(/No DeepSeek API key configured/);
       await job.remove();
     } finally {
       await worker.close();
