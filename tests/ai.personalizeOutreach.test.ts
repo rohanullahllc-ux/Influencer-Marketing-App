@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { runAiOperation, listRegisteredAiOperations, assertAllowedAiOperationName } from "@rdv/ai";
-import { createWorkspaceWithOwner } from "@rdv/auth";
+import { createWorkspaceWithOwner, getUserByEmail, setAiMockMode } from "@rdv/auth";
 import { resetDb } from "./helpers.js";
 
 /**
@@ -54,5 +54,28 @@ describe("AI Orchestration — personalize_outreach (Wave 2 Phase 6)", () => {
         templateBody: null,
       })
     ).rejects.toThrow(/creatorName is required/);
+  });
+
+  it("returns a clearly-labeled mock draft instead of throwing when Mock AI mode is enabled", async () => {
+    const ws = await createWorkspaceWithOwner({ workspaceName: "Draft AI WS Mock", ownerEmail: "draft-ai-owner-mock@test.local" });
+    const owner = await getUserByEmail("draft-ai-owner-mock@test.local");
+    await setAiMockMode({ workspaceId: ws.id, actorUserId: owner.id, enabled: true });
+
+    const result = await runAiOperation<
+      { workspaceId: string; productName: string; productAudienceRationale: string | null; campaignObjective: string | null; creatorName: string; creatorNiche: string | null; templateSubject: string | null; templateBody: string | null },
+      { subject: string; body: string }
+    >("personalize_outreach", {
+      workspaceId: ws.id,
+      productName: "Meal Kit Co",
+      productAudienceRationale: null,
+      campaignObjective: "Drive trial",
+      creatorName: "Big Cook",
+      creatorNiche: "cooking",
+      templateSubject: null,
+      templateBody: null,
+    });
+
+    expect(result.data.subject).toMatch(/\[MOCK DRAFT\]/);
+    expect(result.data.body).toMatch(/MOCK/);
   });
 });

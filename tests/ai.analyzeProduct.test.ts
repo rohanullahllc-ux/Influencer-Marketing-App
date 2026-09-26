@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { runAiOperation, listRegisteredAiOperations, assertAllowedAiOperationName } from "@rdv/ai";
-import { createWorkspaceWithOwner } from "@rdv/auth";
+import { createWorkspaceWithOwner, getUserByEmail, setAiMockMode } from "@rdv/auth";
 import { resetDb } from "./helpers.js";
 
 /**
@@ -45,5 +45,19 @@ describe("AI Orchestration — analyze_product (Wave 2 Phase 2)", () => {
     await expect(
       runAiOperation("analyze_product", { workspaceId: ws.id, productName: "", productDescription: null })
     ).rejects.toThrow(/productName is required/);
+  });
+
+  it("returns clearly-labeled mock output instead of throwing when Mock AI mode is enabled, with no key configured", async () => {
+    const ws = await createWorkspaceWithOwner({ workspaceName: "AI WS Mock", ownerEmail: "ai-owner-mock@test.local" });
+    const owner = await getUserByEmail("ai-owner-mock@test.local");
+    await setAiMockMode({ workspaceId: ws.id, actorUserId: owner.id, enabled: true });
+
+    const result = await runAiOperation<{ workspaceId: string; productName: string; productDescription: string | null }, { audienceRationale: string; confidence: number }>(
+      "analyze_product",
+      { workspaceId: ws.id, productName: "Widget Pro", productDescription: "A widget." }
+    );
+
+    expect(result.data.audienceRationale).toMatch(/\[MOCK/);
+    expect(result.data.confidence).toBeLessThan(0.5);
   });
 });

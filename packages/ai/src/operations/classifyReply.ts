@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { ValidationError } from "@rdv/lib";
+import { isAiMockModeEnabled } from "@rdv/auth";
 import { registerAiOperation } from "../orchestrator.js";
 import { getWorkspaceAnthropicClient } from "../client.js";
+import { mockClassifyReply } from "../mock.js";
 
 /**
  * Wave 3 (Reply Intelligence): classifies an inbound reply into exactly
@@ -35,6 +37,10 @@ const SYSTEM_PROMPT = `You are classifying a creator's reply to an outreach emai
 registerAiOperation<ClassifyReplyInput, ClassifyReplyOutput>("classify_reply", async (input) => {
   if (!input.replyBody || input.replyBody.trim().length === 0) {
     throw new ValidationError("replyBody is required to classify a reply");
+  }
+
+  if (await isAiMockModeEnabled(input.workspaceId)) {
+    return mockClassifyReply();
   }
 
   const client = await getWorkspaceAnthropicClient(input.workspaceId);

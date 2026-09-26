@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { ValidationError } from "@rdv/lib";
+import { isAiMockModeEnabled } from "@rdv/auth";
 import { registerAiOperation } from "../orchestrator.js";
 import { getWorkspaceAnthropicClient } from "../client.js";
+import { mockSummarizeCreatorConversation } from "../mock.js";
 
 /**
  * Wave 4 (Creator CRM, product vision §"AI conversation summaries"):
@@ -34,6 +36,10 @@ registerAiOperation<SummarizeCreatorConversationInput, SummarizeCreatorConversat
   async (input) => {
     if (!input.thread || input.thread.length === 0) {
       throw new ValidationError("summarize_creator_conversation: no conversation history was provided to summarize");
+    }
+
+    if (await isAiMockModeEnabled(input.workspaceId)) {
+      return mockSummarizeCreatorConversation(input);
     }
 
     const client = await getWorkspaceAnthropicClient(input.workspaceId);

@@ -1,7 +1,8 @@
-import { getCredentialStatus } from "@rdv/auth";
+import { getCredentialStatus, isAiMockModeEnabled } from "@rdv/auth";
 import { AuthorizationError } from "@rdv/lib";
 import { requireSession } from "../../../../lib/session";
 import { AddCredentialForm } from "./AddCredentialForm";
+import { MockAiModeToggle } from "./MockAiModeToggle";
 import { PageHeader } from "../../../../components/ui/PageHeader";
 import { ButtonLink } from "../../../../components/ui/Button";
 import { EmptyState } from "../../../../components/ui/EmptyState";
@@ -36,7 +37,10 @@ export default async function IntegrationsPage() {
     return <EmptyState title="Restricted" description="Only an Owner/Admin can manage integration credentials." />;
   }
 
-  const statuses = await getCredentialStatus({ workspaceId: actor.workspaceId, actorUserId: actor.userId });
+  const [statuses, mockModeEnabled] = await Promise.all([
+    getCredentialStatus({ workspaceId: actor.workspaceId, actorUserId: actor.userId }),
+    isAiMockModeEnabled(actor.workspaceId),
+  ]);
 
   return (
     <div>
@@ -44,6 +48,20 @@ export default async function IntegrationsPage() {
         title="Integrations"
         description="Keys are encrypted before storage (AES-256-GCM) and never displayed again after entry. YouTube discovery and AI-assisted steps cannot run for real until a working key is stored here."
       />
+
+      <Card title="Mock AI mode" className="mb-4">
+        <p className="mb-3 text-supporting text-ink-subtle">
+          Exercise the full AI-assisted workflow — product intelligence, creator matching, outreach drafts, reply
+          classification — without a real Anthropic key or any API cost. Every result is generated locally and
+          clearly labeled <span className="font-medium text-ink">[MOCK]</span>, never mistaken for real AI output.
+          This never affects real message sending, which stays behind its own separate approval and safety gate
+          regardless of this setting.
+        </p>
+        <div className="mb-3 flex items-center gap-2">
+          <StatusBadge label={mockModeEnabled ? "Mock AI mode is ON" : "Mock AI mode is off"} tone={mockModeEnabled ? "warning" : "neutral"} />
+        </div>
+        <MockAiModeToggle initialEnabled={mockModeEnabled} />
+      </Card>
 
       <Card title="Current status" className="mb-4">
         <Table>

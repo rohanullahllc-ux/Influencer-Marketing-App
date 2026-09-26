@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { ValidationError } from "@rdv/lib";
+import { isAiMockModeEnabled } from "@rdv/auth";
 import { registerAiOperation } from "../orchestrator.js";
 import { getWorkspaceAnthropicClient } from "../client.js";
+import { mockDraftReplyResponse } from "../mock.js";
 
 /**
  * Wave 3 (Reply Intelligence): drafts a suggested response to a creator's
@@ -34,6 +36,10 @@ const SYSTEM_PROMPT = `You are drafting a suggested follow-up email reply on beh
 registerAiOperation<DraftReplyResponseInput, DraftReplyResponseOutput>("draft_reply_response", async (input) => {
   if (!input.replyBody || input.replyBody.trim().length === 0) {
     throw new ValidationError("replyBody is required to draft a reply response");
+  }
+
+  if (await isAiMockModeEnabled(input.workspaceId)) {
+    return mockDraftReplyResponse(input);
   }
 
   const client = await getWorkspaceAnthropicClient(input.workspaceId);

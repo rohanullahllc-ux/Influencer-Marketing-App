@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { ValidationError } from "@rdv/lib";
+import { isAiMockModeEnabled } from "@rdv/auth";
 import { registerAiOperation } from "../orchestrator.js";
 import { getWorkspaceAnthropicClient } from "../client.js";
+import { mockPersonalizeOutreach } from "../mock.js";
 
 /**
  * Wave 2 Phase 6 (plan §11, §18): drafts a personalized outreach message
@@ -37,6 +39,10 @@ const SYSTEM_PROMPT = `You are a creator-outreach copywriter drafting a single p
 registerAiOperation<PersonalizeOutreachInput, PersonalizeOutreachOutput>("personalize_outreach", async (input) => {
   if (!input.creatorName || input.creatorName.trim().length === 0) {
     throw new ValidationError("creatorName is required to personalize outreach");
+  }
+
+  if (await isAiMockModeEnabled(input.workspaceId)) {
+    return mockPersonalizeOutreach(input);
   }
 
   const client = await getWorkspaceAnthropicClient(input.workspaceId);
