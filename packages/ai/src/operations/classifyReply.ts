@@ -1,9 +1,8 @@
 import { z } from "zod";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { ValidationError } from "@rdv/lib";
 import { isAiMockModeEnabled } from "@rdv/auth";
 import { registerAiOperation } from "../orchestrator.js";
-import { getWorkspaceAnthropicClient } from "../client.js";
+import { runDeepSeekJsonCompletion } from "../client.js";
 import { mockClassifyReply } from "../mock.js";
 
 /**
@@ -32,7 +31,7 @@ export interface ClassifyReplyInput {
   replyBody: string;
 }
 
-const SYSTEM_PROMPT = `You are classifying a creator's reply to an outreach email about a paid partnership/affiliate opportunity. Given the original outreach message (if known) and the creator's reply, return strict JSON with: classification (exactly one of "interested", "not_interested", "needs_human_review" -- use needs_human_review whenever the reply is ambiguous, asks a question you cannot answer with certainty, raises a condition/negotiation, or does not clearly fall into the other two), confidence (0 to 1), limitations (a string describing what made this hard to classify, or null if nothing did), and extractedFacts (an array of short factual strings actually stated in the reply -- e.g. rates mentioned, availability dates, questions asked -- never invented). When genuinely uncertain, prefer needs_human_review over guessing.`;
+const SYSTEM_PROMPT = `You are classifying a creator's reply to an outreach email about a paid partnership/affiliate opportunity. Given the original outreach message (if known) and the creator's reply, return strict JSON with: classification (exactly one of "interested", "not_interested", "needs_human_review" -- use needs_human_review whenever the reply is ambiguous, asks a question you cannot answer with certainty, raises a condition/negotiation, or does not clearly fall into the other two), confidence (0 to 1), limitations (a string describing what made this hard to classify, or null if nothing did), and extractedFacts (an array of short factual strings actually stated in the reply -- e.g. rates mentioned, availability dates, questions asked -- never invented). When genuinely uncertain, prefer needs_human_review over guessing. Respond with only the JSON object, no other text.`;
 
 registerAiOperation<ClassifyReplyInput, ClassifyReplyOutput>("classify_reply", async (input) => {
   if (!input.replyBody || input.replyBody.trim().length === 0) {
@@ -43,31 +42,19 @@ registerAiOperation<ClassifyReplyInput, ClassifyReplyOutput>("classify_reply", a
     return mockClassifyReply();
   }
 
-  const client = await getWorkspaceAnthropicClient(input.workspaceId);
+  const user = [
+    `Original outreach subject: ${input.originalSubject ?? "(unknown)"}`,
+    `Original outreach body: ${input.originalBody ?? "(unknown)"}`,
+    `Reply subject: ${input.replySubject ?? "(none)"}`,
+    `Reply body: ${input.replyBody}`,
+  ].join("\n\n");
 
-  const response = await client.messages.parse({
-    model: "claude-opus-5",
-    max_tokens: 1024,
+  return runDeepSeekJsonCompletion({
+    workspaceId: input.workspaceId,
+    operationName: "classify_reply",
     system: SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: [
-          `Original outreach subject: ${input.originalSubject ?? "(unknown)"}`,
-          `Original outreach body: ${input.originalBody ?? "(unknown)"}`,
-          `Reply subject: ${input.replySubject ?? "(none)"}`,
-          `Reply body: ${input.replyBody}`,
-        ].join("\n\n"),
-      },
-    ],
-    output_config: { format: zodOutputFormat(ClassifyReplyOutputSchema) },
+    user,
+    schema: ClassifyReplyOutputSchema,
+    maxTokens: 1024,
   });
-
-  if (!response.parsed_output) {
-    throw new ValidationError(
-      "classify_reply: Claude's response did not match the required output schema — failing rather than partially saving"
-    );
-  }
-
-  return response.parsed_output;
 });

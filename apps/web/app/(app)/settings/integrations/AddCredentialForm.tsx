@@ -43,7 +43,7 @@ export function AddCredentialForm() {
       <FormField label="Provider" htmlFor="provider">
         <select id="provider" value={provider} onChange={(e) => setProvider(e.target.value)} className={selectClasses}>
           <option value="youtube">YouTube Data API</option>
-          <option value="anthropic">Anthropic API</option>
+          <option value="deepseek">DeepSeek API</option>
         </select>
       </FormField>
       <FormField label="API key" htmlFor="apiKey" required>

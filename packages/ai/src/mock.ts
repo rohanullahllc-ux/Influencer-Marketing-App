@@ -25,7 +25,7 @@ import type {
  */
 
 const MOCK_NOTE =
-  "This is placeholder output from Mock AI mode (Settings > Integrations) — not a real analysis. Turn off Mock AI mode and add a real Anthropic key for genuine output.";
+  "This is placeholder output from Mock AI mode (Settings > Integrations) — not a real analysis. Turn off Mock AI mode and add a real DeepSeek key for genuine output.";
 
 function deriveKeywords(text: string, limit: number): string[] {
   const words = text

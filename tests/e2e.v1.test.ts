@@ -111,7 +111,7 @@ describe("Wave 7 — Complete End-to-End V1 Validation", () => {
     const qualifications = await qualifyCampaignCreators({ workspaceId: ws.id, actorUserId: operatorId, campaignId: campaign.id });
     expect(qualifications[0]?.passed).toBe(true);
 
-    // --- AI Matching (persisted the same way the real worker persists a real Anthropic response) ---
+    // --- AI Matching (persisted the same way the real worker persists a real DeepSeek response) ---
     const match = await persistCreatorMatch({
       workspaceId: ws.id,
       campaignId: campaign.id,
@@ -156,7 +156,7 @@ describe("Wave 7 — Complete End-to-End V1 Validation", () => {
     expect(reply.creatorId).toBe(creator.id);
     expect(reply.campaignId).toBe(campaign.id);
 
-    // --- Reply Intelligence (persisted the same way the real worker persists a real Anthropic classification) ---
+    // --- Reply Intelligence (persisted the same way the real worker persists a real DeepSeek classification) ---
     const classified = await persistReplyClassification({
       workspaceId: ws.id,
       actorUserId: operatorId,

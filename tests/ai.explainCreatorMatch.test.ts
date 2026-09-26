@@ -7,8 +7,8 @@ import { resetDb } from "./helpers.js";
  * Wave 2 Phase 5 (plan §10, §18): the `explain_creator_match` AI
  * operation's contract — registered on import, passes the Wave 1 hard-
  * restriction check, and correctly refuses to run (loudly, not silently)
- * when no Anthropic credential is configured, exactly like Phase 2's
- * analyze_product. No network call to Anthropic is made or mocked.
+ * when no DeepSeek credential is configured, exactly like Phase 2's
+ * analyze_product. No network call to DeepSeek is made or mocked.
  */
 describe("AI Orchestration — explain_creator_match (Wave 2 Phase 5)", () => {
   beforeEach(async () => {
@@ -23,7 +23,7 @@ describe("AI Orchestration — explain_creator_match (Wave 2 Phase 5)", () => {
     expect(() => assertAllowedAiOperationName("explain_creator_match")).not.toThrow();
   });
 
-  it("throws a clear, actionable error when the workspace has no Anthropic key configured", async () => {
+  it("throws a clear, actionable error when the workspace has no DeepSeek key configured", async () => {
     const ws = await createWorkspaceWithOwner({ workspaceName: "Match AI WS", ownerEmail: "match-ai-owner@test.local" });
 
     await expect(
@@ -39,7 +39,7 @@ describe("AI Orchestration — explain_creator_match (Wave 2 Phase 5)", () => {
         creatorSubscriberCount: 5000,
         creatorCountry: "US",
       })
-    ).rejects.toThrow(/No Anthropic API key configured/);
+    ).rejects.toThrow(/No DeepSeek API key configured/);
   });
 
   it("rejects a missing creatorName before ever reaching the credential lookup", async () => {

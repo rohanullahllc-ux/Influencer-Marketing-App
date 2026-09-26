@@ -5,7 +5,7 @@ import { requireRole } from "./rbac.js";
 /**
  * Whether this workspace has Mock AI mode enabled (Settings > Integrations).
  * When true, `packages/ai`'s operations return clearly-labeled placeholder
- * output instead of calling the real Anthropic API — lets a workspace
+ * output instead of calling the real DeepSeek API — lets a workspace
  * exercise the full AI-assisted workflow (product intelligence, matching,
  * outreach drafts, reply classification) with no key and no API cost.
  * Read by every operation in `packages/ai/src/operations/*.ts` before it

@@ -7,7 +7,7 @@ import { resetDb } from "./helpers.js";
 /**
  * Mock AI provider (opt-in): lets a workspace exercise the full
  * AI-assisted workflow with clearly-labeled placeholder output instead of
- * a real Anthropic key. Covers the workspace-level toggle itself
+ * a real DeepSeek key. Covers the workspace-level toggle itself
  * (packages/auth/src/workspaceSettings.ts) plus the three operations that
  * didn't already have a dedicated ai.*.test.ts file (classify_reply,
  * draft_reply_response, summarize_creator_conversation). analyze_product,

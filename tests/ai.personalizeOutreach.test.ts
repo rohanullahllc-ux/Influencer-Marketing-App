@@ -7,7 +7,7 @@ import { resetDb } from "./helpers.js";
  * Wave 2 Phase 6 (plan §11, §18): the `personalize_outreach` AI
  * operation's contract — registered on import, passes the Wave 1 hard-
  * restriction check (never "send"/"approve"), and correctly refuses to
- * run without a configured Anthropic key.
+ * run without a configured DeepSeek key.
  */
 describe("AI Orchestration — personalize_outreach (Wave 2 Phase 6)", () => {
   beforeEach(async () => {
@@ -22,7 +22,7 @@ describe("AI Orchestration — personalize_outreach (Wave 2 Phase 6)", () => {
     expect(() => assertAllowedAiOperationName("personalize_outreach")).not.toThrow();
   });
 
-  it("throws a clear, actionable error when the workspace has no Anthropic key configured", async () => {
+  it("throws a clear, actionable error when the workspace has no DeepSeek key configured", async () => {
     const ws = await createWorkspaceWithOwner({ workspaceName: "Draft AI WS", ownerEmail: "draft-ai-owner@test.local" });
 
     await expect(
@@ -36,7 +36,7 @@ describe("AI Orchestration — personalize_outreach (Wave 2 Phase 6)", () => {
         templateSubject: null,
         templateBody: null,
       })
-    ).rejects.toThrow(/No Anthropic API key configured/);
+    ).rejects.toThrow(/No DeepSeek API key configured/);
   });
 
   it("rejects a missing creatorName before ever reaching the credential lookup", async () => {

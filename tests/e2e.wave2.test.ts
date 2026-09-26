@@ -175,7 +175,7 @@ describe("Wave 2 — End-to-End V1 vertical slice", () => {
     expect(qualifications[0]?.passed).toBe(true);
     expect(qualifications[0]?.thresholdsSnapshot).toBeDefined();
 
-    // --- 6. AI Matching (explained) — persisted the same way the real worker persists a real Anthropic response ---
+    // --- 6. AI Matching (explained) — persisted the same way the real worker persists a real DeepSeek response ---
     const match = await persistCreatorMatch({
       workspaceId: ws.id,
       campaignId: campaign.id,

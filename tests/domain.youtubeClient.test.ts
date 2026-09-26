@@ -7,7 +7,7 @@ import { resetDb } from "./helpers.js";
  * Wave 2 Phase 3 (plan §8, §18): the YouTube client's credential-lookup
  * failure path — no live YouTube key exists in this environment, so
  * both real DB-backed lookups are expected to fail loudly before any
- * network call, the same pattern as Phase 2's Anthropic credential test.
+ * network call, the same pattern as Phase 2's DeepSeek credential test.
  */
 describe("YouTube client — credential lookup (Wave 2 Phase 3)", () => {
   beforeEach(async () => {

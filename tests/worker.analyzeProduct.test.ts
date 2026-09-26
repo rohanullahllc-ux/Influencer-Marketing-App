@@ -16,10 +16,10 @@ import "../apps/worker/src/processors/analyzeProduct.js";
  * Wave 2 Phase 2 (plan §7): the full real pipeline (queue -> worker ->
  * registry -> @rdv/domain -> @rdv/ai) for `ai_analyze_product`, run
  * through a real BullMQ worker against real local Redis + Postgres. No
- * Anthropic key is configured in this environment, so the job is
+ * DeepSeek key is configured in this environment, so the job is
  * expected to fail loudly with a clear reason — proving the pipeline
  * wires together correctly end-to-end without needing a live network
- * call to Anthropic (matches Phase 0's "code path fully built, real
+ * call to DeepSeek (matches Phase 0's "code path fully built, real
  * calls need a real key" design).
  */
 describe("Worker — ai_analyze_product (Wave 2 Phase 2)", () => {
@@ -28,7 +28,7 @@ describe("Worker — ai_analyze_product (Wave 2 Phase 2)", () => {
     await closeRedisConnection();
   });
 
-  it("runs the real registered handler end-to-end and fails loudly without a configured Anthropic key", async () => {
+  it("runs the real registered handler end-to-end and fails loudly without a configured DeepSeek key", async () => {
     await resetDb();
     const ws = await createWorkspaceWithOwner({ workspaceName: "Worker AI WS", ownerEmail: "worker-ai-owner@test.local" });
     const ownerId = (await getUserByEmail("worker-ai-owner@test.local")).id;
@@ -59,12 +59,12 @@ describe("Worker — ai_analyze_product (Wave 2 Phase 2)", () => {
           if (failedJob?.id === job.id) resolve(err);
         });
         worker.on("completed", (completedJob) => {
-          if (completedJob.id === job.id) reject(new Error("job unexpectedly completed with no Anthropic key configured"));
+          if (completedJob.id === job.id) reject(new Error("job unexpectedly completed with no DeepSeek key configured"));
         });
         setTimeout(() => reject(new Error("timed out waiting for job failure")), 8000);
       });
 
-      expect((failure as Error).message).toMatch(/No Anthropic API key configured/);
+      expect((failure as Error).message).toMatch(/No DeepSeek API key configured/);
 
       // Failed jobs are kept by design (removeOnFail: false, see
       // packages/queue/src/queues.ts) — remove this real, shared-Redis

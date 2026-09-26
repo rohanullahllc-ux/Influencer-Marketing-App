@@ -7,7 +7,7 @@ import { ValidationError } from "@rdv/lib";
  * risks: quota exhaustion is handled by staying narrow, not by scraping).
  * Reads the decrypted per-workspace key via Phase 0's
  * getDecryptedCredential, never a bare env var, mirroring exactly how
- * packages/ai/src/client.ts reads the Anthropic key. Plain `fetch` is
+ * packages/ai/src/client.ts reads the DeepSeek key. Plain `fetch` is
  * used rather than a new SDK dependency — two REST endpoints don't
  * justify one.
  */
